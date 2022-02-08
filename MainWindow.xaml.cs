@@ -77,7 +77,7 @@ namespace VTOL
         Updater Update;
         public bool Animation_Start_Northstar { get; set; }
         public bool Animation_Start_Vanilla { get; set; }
-
+        
         public MainWindow()
         {
             InitializeComponent();
@@ -205,7 +205,7 @@ namespace VTOL
                         Found_Install_Folder = true;
                         Titanfall2_Directory_TextBox.Text = Current_Install_Folder;
                         // Install_Textbox.BackColor = Color.White;
-                        Send_Info_Notif("\nFound Install Location at " + Current_Install_Folder + "\n");
+                        Send_Info_Notif("\n找到目录： " + Current_Install_Folder + "\n");
                         if (Directory.Exists(Current_Install_Folder))
                         {
 
@@ -215,12 +215,12 @@ namespace VTOL
                             {
 
 
-                                Install_NS.Content = "Update/Repair NorthStar";
+                                Install_NS.Content = "更新/修复北极星CN";
                             }
                             else
                             {
 
-                                Install_NS.Content = "Install NorthStar";
+                                Install_NS.Content = "安装北极星CN";
 
 
                             }
@@ -246,7 +246,7 @@ namespace VTOL
             }
             catch (System.IO.DirectoryNotFoundException e)
             {
-                Console.WriteLine("Could Not Verify Dir" + Current_Install_Folder);
+                Console.WriteLine("无法验证目录：" + Current_Install_Folder);
                 Send_Warning_Notif("\nThe Launcher Tried to Auto Check For an existing CFG, please use the manual Check to search.");
 
 
@@ -353,7 +353,7 @@ namespace VTOL
     }
         void Download_Install(object sender, RoutedEventArgs e)
         {
-            Send_Info_Notif("Starting Download!, please do not be alarmed if there is no activity!.");
+            Send_Info_Notif("下载任务开始，此过程可能持续5-10分钟，请耐心等候");
 
             var objname = ((System.Windows.Controls.Button)sender).Tag.ToString();
             string[] words = objname.Split("|");
@@ -367,7 +367,7 @@ namespace VTOL
         {
             var val = ((System.Windows.Controls.Button)sender).Tag.ToString();
 
-            Send_Info_Notif("Opening - " + val);
+            Send_Info_Notif("正在打开 - " + val);
             System.Diagnostics.Process.Start(new ProcessStartInfo
             {
                 FileName = val,
@@ -987,7 +987,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
             if (NS_Installed == false)
             {
 
-                Send_Error_Notif("\nNorthStar Launcher or Titanfall2 Was not found, do you want to Re-Install it by Clicking Install Northstar Launcher? (Please check the Integrity of Titanfall2 as well)");
+                Send_Error_Notif("\n无法找到《泰坦陨落2》游戏文件或北极星CN组件丢失，请尝试检查北极星CN更新或联系官方！");
 
                 Install_NS_EXE_Textbox.Foreground = Brushes.Red;
 
@@ -996,7 +996,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
             {
 
                 Install_NS_EXE_Textbox.Foreground = Brushes.Green;
-                Send_Success_Notif("Integrity Verified!");
+                Send_Success_Notif("验证成功!");
 
 
             }
@@ -1160,7 +1160,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
                 Properties.Settings.Default.Version = myJObject.SelectToken("tag_name").Value<string>();
                 Properties.Settings.Default.Save();
 
-                Send_Info_Notif("\nRelease Parsed! found - \n"+out_);
+                Send_Info_Notif("\n发现最新版本： - \n"+out_);
 
                 return out_;
 
@@ -1182,16 +1182,15 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
                 var myJObject = JObject.Parse(myJsonString);
 
 
-                current_Northstar_version_Url =  myJObject.SelectToken("assets.browser_download_url").Value<string>();
                 Properties.Settings.Default.Version = myJObject.SelectToken("tag_name").Value<string>();
                 Properties.Settings.Default.Save();
-
-                Send_Info_Notif("\nRelease Parsed! found - \n"+current_Northstar_version_Url);
+                current_Northstar_version_Url = "https://cdn.wolf109909.top/northstarcnmirror/" + Properties.Settings.Default.Version + ".zip";
+                Send_Info_Notif("\n发现北极星CN最新版本： - \n"+current_Northstar_version_Url);
 
             }
             else
             {
-                Send_Error_Notif("\nRelease Not Found!!");
+                Send_Error_Notif("\n无法找到北极星CN版本信息，请联系官方！");
 
 
             }
@@ -1280,7 +1279,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
                     if (fileExt == ".zip")
                     {
                         ZipFile.ExtractToDirectory(Target_Zip, Destination, true);
-                        Send_Success_Notif("Installed - " + LAST_INSTALLED_MOD);
+                        Send_Success_Notif("安装成功： - " + LAST_INSTALLED_MOD);
                         // Send_Success_Notif("\nUnpacking Complete!\n");
                         if (Clean_Thunderstore == true)
                         {
@@ -1296,20 +1295,20 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
                                     // If file found, delete it    
                                     File.Delete(Path.Combine(Destination, "icon.png"));
                                 }
-                                else { Send_Warning_Notif("Cleanup Files not found"); }
+                                else { Send_Warning_Notif("无法找到清理文件！"); }
                                 if (File.Exists(Path.Combine(Destination, "manifest.json")))
                                 {
                                     // If file found, delete it    
                                     File.Delete(Path.Combine(Destination, "manifest.json"));
                                 }
-                                else { Send_Warning_Notif("Cleanup Files not found"); }
+                                else { Send_Warning_Notif("无法找到清理文件！"); }
 
                                 if (File.Exists(Path.Combine(Destination, "README.md")))
                                 {
                                     // If file found, delete it    
                                     File.Delete(Path.Combine(Destination, "README.md"));
                                 }
-                                else { Send_Warning_Notif("Cleanup Files not found"); }
+                                else { Send_Warning_Notif("无法找到清理文件！"); }
 
 
 
@@ -1346,7 +1345,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
                                 }
                                 Directory.Delete(Destination,true);
 
-                                Send_Info_Notif("Unpacked " + Path.GetFileName(Target_Zip) + " to " + Final_Dir);
+                                Send_Info_Notif("成功将 " + Path.GetFileName(Target_Zip) + " 解压至 " + Final_Dir);
 
 
                             }
@@ -1362,7 +1361,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
                     {
                         //Main_Window.SelectedTab = Main;
                       
-                        Send_Error_Notif("\nObject Is Not a Zip!\n");
+                        Send_Error_Notif("\n目标文件格式错误!\n");
 
 
                     }
@@ -1383,7 +1382,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
                     else
                     {
                         //Main_Window.SelectedTab = Main;
-                        Send_Fatal_Notif("\nObject Is Not a Zip!\n");
+                        Send_Fatal_Notif("\n目标文件格式错误!\n");
 
 
                     }
@@ -1392,13 +1391,13 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
                 {
                     if (!File.Exists(Target_Zip))
                     {
-                        Send_Error_Notif("\nTarget Zip Does Not exist!!!!!!\n");
+                        Send_Error_Notif("\n目标文件丢失!\n");
 
 
                     }
                     if (!Directory.Exists(Destination))
                     {
-                        Send_Error_Notif("\nTarget Location Does Not exist, please Double Check or Browse for the correct install location\n");
+                        Send_Error_Notif("\n目标文件路径不存在，请检查游戏目录是否设置正确！\n");
 
                     }
                 }
@@ -1431,7 +1430,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
 
 
 
-            Send_Info_Notif("\nUnpacking " + Path.GetFileName(Target_Zip) + " to " + Destination_Zip);
+            Send_Info_Notif("\n正在将 " + Path.GetFileName(Target_Zip) + " 解压至 " + Destination_Zip);
             if (File.Exists(Target_Zip) && Directory.Exists(Destination_Zip))
             {
                 string fileExt = System.IO.Path.GetExtension(Target_Zip);
@@ -1439,33 +1438,33 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
                 if (fileExt == ".zip")
                 {
                     ZipFile.ExtractToDirectory(Target_Zip, Destination_Zip, true);
-                    Send_Info_Notif("\nUnpacking Complete!");
+                    Send_Info_Notif("\n解压完成!");
                     if (File.Exists(Current_Install_Folder+@"\ns_startup_args_dedi.txt") && File.Exists(Current_Install_Folder+@"\ns_startup_args.txt"))
                     {
                         if (do_not_overwrite_Ns_file == true)
                         {
-                            Send_Info_Notif("\nRestoring Files");
+                            Send_Info_Notif("\n正在恢复文件");
                             if (Directory.Exists(Current_Install_Folder+@"\TempCopyFolder\"))
                             {
                                 System.IO.File.Copy(Current_Install_Folder+@"\TempCopyFolder\ns_startup_args.txt", Current_Install_Folder+@"\ns_startup_args.txt", true);
-                                Send_Info_Notif("\nCleaning Residual");
+                                Send_Info_Notif("\n正在清理残留文件");
 
                                 Directory.Delete(Current_Install_Folder+@"\TempCopyFolder", true);
-                                Send_Info_Notif("\nInstall Complete!");
+                                Send_Info_Notif("\n安装完毕!");
                             }
 
 
                         }
                         if (do_not_overwrite_Ns_file_Dedi == true)
                         {
-                            Send_Info_Notif("\nRestoring Files");
+                            Send_Info_Notif("\n正在恢复文件");
                             if (Directory.Exists(Current_Install_Folder+@"\TempCopyFolder\"))
                             {
                                 System.IO.File.Copy(Current_Install_Folder+@"\TempCopyFolder\ns_startup_args_dedi.txt", Current_Install_Folder+@"\ns_startup_args_dedi.txt", true);
-                                Send_Info_Notif("\nCleaning Residual");
+                                Send_Info_Notif("\n正在清理残留文件");
 
                                 Directory.Delete(Current_Install_Folder+@"\TempCopyFolder", true);
-                                Send_Info_Notif("\nInstall Complete!");
+                                Send_Info_Notif("\n安装完毕!");
                             }
 
 
@@ -1477,13 +1476,13 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
                 {
                     if (!File.Exists(Target_Zip))
                     {
-                        Send_Error_Notif("\nTarget Zip Does Not exist!!!!!!");
+                        Send_Error_Notif("\n错误：无法读取下载的文件，请联系官方！");
 
 
                     }
                     if (!Directory.Exists(Destination_Zip))
                     {
-                        Send_Error_Notif("\nTarget Location Does Not exist, please Double Check or Browse for the correct install location");
+                        Send_Error_Notif("\n错误：找不到游戏目录，请检查目录设置是否正确！");
 
                     }
                 }
@@ -1492,7 +1491,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
             {
 
                 // Main_Window.SelectedTab = Main;
-                Send_Error_Notif("\nObject Is Not a Zip!\n");
+                Send_Error_Notif("\n错误：文件下载目标格式错误！\n");
 
             }
         }
@@ -1522,19 +1521,19 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
                     else
                     {
 
-                        Console.WriteLine("Trying again at " + dirInfo);
+                        Console.WriteLine("正在重试： " + dirInfo);
 
                     }
                     if (dirInfo == null)
                     {
-                        Console.WriteLine(dirInfo.FullName + "This is not a valid Folder????!");
+                        Console.WriteLine(dirInfo.FullName + "可能不是正确的文件夹");
                         continue;
 
                     }
                     // Resursive call for each subdirectory.
                 }
 
-                Console.WriteLine("\nCould not Find the Install at " +root+ " - Continuing Traversal");
+                Console.WriteLine("\n无法在 " +root+ " - 目录中找到文件，正在继续查找");
 
             }
             catch (Exception e)
@@ -1705,7 +1704,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
                 {
                     Titanfall2_Directory_TextBox.Background = Brushes.Red;
                     Install_NS_EXE_Textbox.Background = Brushes.Red;
-                    Send_Fatal_Notif("\nCould Not Find, Please Manually Navigate to a proper Titanfall2 installation");
+                    Send_Fatal_Notif("\n无法自动搜索游戏安装目录，请手动设置！");
                     break;
 
 
@@ -1720,7 +1719,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
                 saveAsyncFile(Current_Install_Folder, @"C:\ProgramData\VTOL_DATA\VARS\INSTALL.txt", false, false);
                 // Log_Box.AppendText("\nFound Install Location at " + Current_Install_Folder + "\n");
                 NSExe = Get_And_Set_Filepaths(Current_Install_Folder, "NorthstarLauncher.exe");
-                Send_Success_Notif("Found The install - Checking integrity Now!");
+                Send_Success_Notif("发现安装目录!正在检查安装完整性...");
                 //Checking if the path Given Returned Something Meaningful. I know i could do this better, but its 3.37am and i feel like im dying from this cold :|.
                 Check_Integrity_Of_NSINSTALL();
             }
@@ -1763,7 +1762,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
                 Console.WriteLine("In Mods!");
                 if (Current_Install_Folder == null || Current_Install_Folder == "" || !Directory.Exists(Current_Install_Folder))
                 {
-                    HandyControl.Controls.Growl.AskGlobal("Could Not find That Install Location !!!, please renavigate to the Correct Install Path!", isConfirmed =>
+                    HandyControl.Controls.Growl.AskGlobal("无法找到安装目录！手动设置！", isConfirmed =>
                      {
                          install_Prompt = isConfirmed;
                          return true;
@@ -1791,9 +1790,9 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
                             //Log_Box.AppendText("Current Mod Dir Found At - "+NS_Mod_Dir);
                             if (!Directory.Exists(NS_Mod_Dir))
                             {
-                                Send_Fatal_Notif("\nMod Directory is Empty");
+                                Send_Fatal_Notif("\nMod 文件夹为空");
                                 // Main_Window.SelectedTab = Main;
-                                Send_Fatal_Notif("\nNorthStar Is Not Installed Properly!, do you want to re-install it?.");
+                                Send_Fatal_Notif("\n北极星CN似乎没有正确安装，是否重新安装？");
 
                             }
                             else if (IsValidPath(NS_Mod_Dir) == true)
@@ -1827,14 +1826,14 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
 
                                 //   Log_Box.AppendText("\nInvalid Path");
                                 //   Main_Window.SelectedTab = Main;
-                                Send_Fatal_Notif("\nNorthStar Is Not Installed Properly!, do you want to re-install it?.");
+                                Send_Fatal_Notif("\n北极星CN似乎没有正确安装，是否重新安装？");
                             }
                         }
                         else
                         {
                             // Main_Window.SelectedTab = Main;
 
-                            Send_Fatal_Notif("\nNorthStar Is Not Installed!, do you want to install it?.");
+                            Send_Fatal_Notif("\n北极星CN还没有被安装, 是否需要安装？");
 
 
                         }
@@ -1843,7 +1842,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
                     else
                     {
 
-                        Send_Fatal_Notif("\nInvalid Path To Titanfall2!");
+                        Send_Fatal_Notif("\n错误的游戏目录！请重新设置！");
 
                     }
                 }
@@ -1862,7 +1861,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
         {
 
             completed_flag = 0;
-            Read_Latest_Release("https://api.github.com/repos/R2Northstar/Northstar/releases/latest");
+            Read_Latest_Release("https://api.github.com/repos/R2NorthstarCN/R2NorthstarCN_Launcher/releases/latest");
             //  Is file downloading yet?
 
             if (webClient != null)
@@ -1875,7 +1874,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
                 {
                     if (Directory.Exists(Current_Install_Folder + @"\TempCopyFolder"))
                     {
-                        Send_Info_Notif("\nBacking up arg files");
+                        Send_Info_Notif("\n正在备份配置文件...");
 
                         System.IO.File.Copy(Current_Install_Folder+@"\ns_startup_args.txt", Current_Install_Folder+@"\TempCopyFolder\ns_startup_args.txt", true);
 
@@ -1884,7 +1883,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
                     else
                     {
 
-                        Send_Info_Notif("\nCreating Directory and Backing up arg files");
+                        Send_Info_Notif("\n正在创建目录并备份文件...");
                         System.IO.Directory.CreateDirectory(Current_Install_Folder + @"\TempCopyFolder");
 
                         System.IO.File.Copy(Current_Install_Folder+@"\ns_startup_args.txt", Current_Install_Folder+@"\TempCopyFolder\ns_startup_args.txt", true);
@@ -1896,7 +1895,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
                 {
                     if (Directory.Exists(Current_Install_Folder + @"\TempCopyFolder"))
                     {
-                        Send_Info_Notif("\nBacking up arg files");
+                        Send_Info_Notif("\n正在备份配置文件...");
 
                         System.IO.File.Copy(Current_Install_Folder+@"\ns_startup_args.txt", Current_Install_Folder+@"\TempCopyFolder\ns_startup_args.txt", true);
 
@@ -1905,7 +1904,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
                     else
                     {
 
-                        Send_Info_Notif("\nCreating Directory and Backing up arg files");
+                        Send_Info_Notif("\n正在创建目录并备份文件...");
                         System.IO.Directory.CreateDirectory(Current_Install_Folder + @"\TempCopyFolder");
 
                         System.IO.File.Copy(Current_Install_Folder+@"\ns_startup_args.txt", Current_Install_Folder+@"\TempCopyFolder\ns_startup_args.txt", true);
@@ -1915,7 +1914,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
                     Directory.CreateDirectory(@"C:\ProgramData\VTOL_DATA\Releases\");
                     webClient.DownloadFileAsync(new Uri(current_Northstar_version_Url), @"C:\ProgramData\VTOL_DATA\Releases\NorthStar_Release.zip");
 
-                    Send_Warning_Notif("\nStarting Install procedure!");
+                    Send_Warning_Notif("\n开始执行安装程序！");
 
 
 
@@ -1925,7 +1924,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
 
                     Directory.CreateDirectory(@"C:\ProgramData\VTOL_DATA\Releases\");
                     webClient.DownloadFileAsync(new Uri(current_Northstar_version_Url), @"C:\ProgramData\VTOL_DATA\Releases\NorthStar_Release.zip");
-                    Send_Warning_Notif("\nStarting Install procedure!");
+                    Send_Warning_Notif("\n开始执行安装程序！");
 
 
 
@@ -1940,7 +1939,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
 
                 Directory.CreateDirectory(@"C:\ProgramData\VTOL_DATA\Releases\");
                 webClient.DownloadFileAsync(new Uri(current_Northstar_version_Url), @"C:\ProgramData\VTOL_DATA\Releases\NorthStar_Release.zip");
-                Send_Warning_Notif("\nStarting Install procedure!");
+                Send_Warning_Notif("\n开始执行安装程序！");
 
             }
 
@@ -1951,12 +1950,12 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
             if (Directory.Exists(path+@"\Disable_Corner"))
             {
 
-                Console.WriteLine(path + "    This Mod is Disabled");
+                Console.WriteLine(path + "    已被禁用");
 
             }
             else
             {
-                Console.WriteLine(path + "    This Mod is Enabled");
+                Console.WriteLine(path + "    已被启用");
 
 
 
@@ -2158,12 +2157,12 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
 
                 }
 
-                Send_Success_Notif("Mods Moved Successfully!");
+                Send_Success_Notif("Mods移动成功!");
             }
             catch (Exception ex)
             {
                 Send_Error_Notif(ex.Message);
-                Send_Warning_Notif("Please check Your Mod Folder at - " +Current_Install_Folder+@"\R2Northstar\mods\");
+                Send_Warning_Notif("请检查你的Mods文件夹： - " +Current_Install_Folder+@"\R2Northstar\mods\");
                 // Log_Box.AppendText(ex.StackTrace);
 
             }
@@ -2346,14 +2345,14 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
         {
 
             webClient = null;
-            Send_Info_Notif("\nDownload completed!");
+            Send_Info_Notif("\n下载完成!");
             Unpack_To_Location(@"C:\ProgramData\VTOL_DATA\Releases\NorthStar_Release.zip", Current_Install_Folder);
         }
         private void Completed_t(object sender, AsyncCompletedEventArgs e)
         {
 
             webClient = null;
-            Send_Info_Notif("\nDownload completed!");
+            Send_Info_Notif("\n下载完成!");
             Unpack_To_Location_Custom(Current_Install_Folder+ @"\NS_Downloaded_Mods\MOD.zip", Current_Install_Folder+ @"\R2Northstar\mods");
         }
 
@@ -2361,7 +2360,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
         {
 
             webClient = null;
-            Send_Info_Notif("\nDownload completed!");
+            Send_Info_Notif("\n下载完成!");
             Unpack_To_Location_Custom(Current_Install_Folder+ @"\NS_Downloaded_Mods\"+LAST_INSTALLED_MOD+".zip", Current_Install_Folder+ @"\R2Northstar\mods\"+LAST_INSTALLED_MOD,true);
         }
 
@@ -2395,13 +2394,13 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
             try
             {
 
-                Updater Update = new Updater("R2Northstar", "Northstar");
+                Updater Update = new Updater("R2NorthstarCN", "R2NorthstarCN_Launcher");
                 Update.Force_Version = Properties.Settings.Default.Version;
                 Update.Force_Version_ = true;
                 if (Update.CheckForUpdate())
                 {
                     Badge.Visibility = Visibility.Visible;
-                    Badge.Text = "New Update Available";
+                    Badge.Text = "发现新版本！";
                 }
                 else
                 {
@@ -2413,7 +2412,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
             }
             catch (Exception ex)
             {
-                Send_Warning_Notif("Please install Northstar again To Try Remedy This Error");
+                Send_Warning_Notif("请重新安装北极星CN来解决这个问题");
                 Send_Warning_Notif(ex.ToString());
             }
 
@@ -2456,7 +2455,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
                 else
                 {
 
-                    MessageBox.Show("Could Not Find NorthStar.exe!");
+                    MessageBox.Show("无法找到NorthStar.exe!");
 
 
                 }
@@ -2533,7 +2532,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
                 if (Skin_Temp_Loc == null || !File.Exists(Skin_Temp_Loc))
                 {
 
-                   Send_Error_Notif("\nInvalid Mod Zip Location chosen");
+                   Send_Error_Notif("\nMod Zip文件格式错误");
                     return;
 
                 }
@@ -2543,7 +2542,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
                    // Send_Success_Notif("\nSkin Found!");
                     if (ZipHasFile(".dds", Skin_Temp_Loc))
                     {
-                       Send_Success_Notif("Compatible Skin Detected");
+                       Send_Success_Notif("找到兼容的皮肤！");
                         Compat_Indicator.Fill = Brushes.Green;
                         Install_Skin_Bttn.IsEnabled = true;
                         //   var directory = new DirectoryInfo(root);
@@ -2566,7 +2565,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
                     }
                     else
                     {
-                        Send_Error_Notif("Incompatible Skin Detected");
+                        Send_Error_Notif("发现不兼容的皮肤！");
                         Compat_Indicator.Fill = Brushes.Red;
                         Install_Skin_Bttn.IsEnabled = false;
 
@@ -2825,7 +2824,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
                     string path = folderDlg.SelectedPath;
                     if (path == null || !Directory.Exists(path))
                     {
-                        Send_Error_Notif("\nInvalid Install Location chosen");
+                        Send_Error_Notif("\n设置了非法安装路径");
 
 
                     }
@@ -2851,7 +2850,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
             catch (Exception ex)
             {
 
-                MessageBox.Show("\nIssue with File path, please Rebrowse.");
+                MessageBox.Show("\n文件路径错误，请重新设置");
                 Send_Fatal_Notif(ex.Message);
             }
         }
@@ -2906,7 +2905,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
                 else
                 {
 
-                    MessageBox.Show("Could Not Find NorthStar.exe!");
+                    MessageBox.Show("无法找到NorthStar.exe!");
 
 
                 }
@@ -2953,7 +2952,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
                     if (path == null || !File.CheckFileExists)
                     {
 
-                      Send_Error_Notif("\nInvalid Mod Zip Location chosen");
+                      Send_Error_Notif("\nMod Zip 文件路径错误！");
 
 
                     }
@@ -2974,7 +2973,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
             catch (Exception ex)
             {
 
-                Send_Error_Notif("\nIssue with File path, please Rebrowse.");
+                Send_Error_Notif("\n路径错误，请重新设置！");
                 Send_Fatal_Notif(ex.Message);
             }
         }
@@ -3006,7 +3005,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
             DDSFolderExist = FileList.Count;
             if (DDSFolderExist == 0)
             {
-                MessageBox.Show("Could Not Find Skins in Zip??");
+                MessageBox.Show("zip包中不存在皮肤");
                 //   throw new Exception(rm.GetString("FindSkinFailed"));
             }
 
@@ -3043,7 +3042,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
             }
 
             FileList.Clear();
-            Send_Success_Notif("Installed!");
+            Send_Success_Notif("安装成功！");
             DirectoryInfo di = new DirectoryInfo(Skin_Path);
             FileInfo[] files = di.GetFiles();
 
@@ -3214,7 +3213,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
                 else
                 {
 
-                    MessageBox.Show("Could Not Find Dedicated bat!");
+                    MessageBox.Show("无法找到r2ds.bat!");
 
 
                 }
@@ -3222,7 +3221,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
             else
             {
 
-                MessageBox.Show("Could Not Find Dedicated bat!");
+                MessageBox.Show("无法找到r2ds.bat!");
 
 
             }
@@ -3276,7 +3275,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
                 else
                 {
 
-                    MessageBox.Show("Could Not Find NorthStar.exe!");
+                    MessageBox.Show("无法找到NorthStar.exe!");
 
 
                 }
@@ -3292,7 +3291,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
 
         private void Ns_Args_Unchecked(object sender, RoutedEventArgs e)
         {
-            Write_To_Log("\nOVERWRITE ns_startup_args.txt ENABLED!");
+            Write_To_Log("\n将覆盖ns_startup_args.txt!");
             Properties.Settings.Default.Ns_Startup = false;
             Properties.Settings.Default.Save();
         }
@@ -3300,7 +3299,7 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
         private void Ns_Args_Checked(object sender, RoutedEventArgs e)
         {
 
-            Write_To_Log("\nDo not overwrite ns_startup_args.txt ENABLED! - this will backup and restore the original ns_startup_args and from the folder");
+            Write_To_Log("\n将不会覆盖ns_startup_args.txt - 我们将备份原来的文件，当更新完成后恢复");
             Properties.Settings.Default.Ns_Startup = true;
             Properties.Settings.Default.Save();
         }
@@ -3308,14 +3307,14 @@ Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_
         private void Ns_Args_Dedi_Checked(object sender, RoutedEventArgs e)
         {
 
-            Write_To_Log("\nDo not overwrite ns_startup_args_Dedi.txt ENABLED! - this will backup and restore the original ns_startup_args_dedi from the folder");
+            Write_To_Log("\n将不会覆盖ns_startup_args_Dedi.txt - 我们将备份原来的文件，当更新完成后恢复");
             Properties.Settings.Default.Ns_Dedi = true;
             Properties.Settings.Default.Save();
         }
 
         private void Ns_Args_Dedi_Unchecked(object sender, RoutedEventArgs e)
         {
-            Write_To_Log("\nOVERWRITE ns_startup_args_Dedi.txt ENABLED!");
+            Write_To_Log("\n将覆盖ns_startup_args_Dedi.txt!");
             Properties.Settings.Default.Ns_Dedi = false;
             Properties.Settings.Default.Save();
         }

@@ -47,21 +47,21 @@
 
             <hc:SimplePanel Margin="38,50,37,238" Background="#FF101010"  hc:BorderElement.CornerRadius="15">
                 <hc:Badge x:Name="Badge" Value="2" Text="New" Margin="60,227,60,9" Background="#FFFF0C0C" BorderBrush="White"  />
-                <Button x:Name="Install_NS" Content="Update/Repair +NorthStar" Height="50" Margin="60,242,60,0" VerticalAlignment="Top" BorderBrush="White" Background="#FF2C4C4C" Click="Install_NS_Click" HorizontalAlignment="Stretch"/>
+                <Button x:Name="Install_NS" Content="更新/修复 北极星CN" Height="50" Margin="60,242,60,0" VerticalAlignment="Top" BorderBrush="White" Background="#FF2C4C4C" Click="Install_NS_Click" HorizontalAlignment="Stretch"/>
 
 
 
-                <Label Content="+Northstar Install Exe Directory" Height="50" Width="190" Margin="60,122,0,0" VerticalAlignment="Top" Background="{x:Null}" BorderBrush="{x:Null}" HorizontalAlignment="Left" AutomationProperties.HelpText="Your NorthStar Install Location" RenderTransformOrigin="0.5,0.5" Foreground="White"/>
-                <Label Content="Titanfall 2 Install Directory" Height="45" Width="162" Margin="60,28,0,0" VerticalAlignment="Top" Background="{x:Null}" BorderBrush="{x:Null}" HorizontalAlignment="Left" Foreground="White"/>
-                <Button x:Name="Check_Btn" Content="Check" Height="32" HorizontalAlignment="Stretch" Margin="775,171,60,0" VerticalAlignment="Top" BorderBrush="{x:Null}" Background="#FF2C4C4C" Click="Check_Btn_Click">
+                <Label Content="北极星CN文件位置" Height="50" Width="190" Margin="60,122,0,0" VerticalAlignment="Top" Background="{x:Null}" BorderBrush="{x:Null}" HorizontalAlignment="Left" AutomationProperties.HelpText="Your NorthStar Install Location" RenderTransformOrigin="0.5,0.5" Foreground="White"/>
+                <Label Content="《泰坦陨落2》游戏目录" Height="45" Width="162" Margin="60,28,0,0" VerticalAlignment="Top" Background="{x:Null}" BorderBrush="{x:Null}" HorizontalAlignment="Left" Foreground="White"/>
+                <Button x:Name="Check_Btn" Content="验证" Height="32" HorizontalAlignment="Stretch" Margin="775,171,60,0" VerticalAlignment="Top" BorderBrush="{x:Null}" Background="#FF2C4C4C" Click="Check_Btn_Click">
                     <hc:AdornerElement.Instance>
-                        <hc:Poptip Content="Verifies The +Northstar Install" PlacementType="TopLeft"/>
+                        <hc:Poptip Content="验证北极星CN的文件完整性" PlacementType="TopLeft"/>
                     </hc:AdornerElement.Instance>
                 </Button>
 
-                <Button x:Name="Browse_Titanfall_2" Content="Browse" Height="32" HorizontalAlignment="Stretch" Margin="775,72,60,0" VerticalAlignment="Top" BorderBrush="{x:Null}" Background="#FF2C4C4C" Click="Browse_Titanfall_2_Click">
+                <Button x:Name="Browse_Titanfall_2" Content="浏览..." Height="32" HorizontalAlignment="Stretch" Margin="775,72,60,0" VerticalAlignment="Top" BorderBrush="{x:Null}" Background="#FF2C4C4C" Click="Browse_Titanfall_2_Click">
                     <hc:AdornerElement.Instance>
-                        <hc:Poptip Content="Manually Set the Install Location" PlacementType="TopLeft"/>
+                        <hc:Poptip Content="手动设置游戏目录" PlacementType="TopLeft"/>
                     </hc:AdornerElement.Instance>
                 </Button>
                 <hc:TextBox x:Name="Install_NS_EXE_Textbox" Height="32" TextWrapping="Wrap" VerticalAlignment="Top" Margin="60,171,0,0" Cursor="IBeam" UndoLimit="101" IsReadOnly="True" Background="White" BorderBrush="{x:Null}" HorizontalAlignment="Left" Width="710" SelectionBrush="{x:Null}"/>
@@ -86,8 +86,8 @@
             <Label Content="MAIN" Height="44" Width="190" Margin="0,6,0,0" VerticalAlignment="Top" Background="{x:Null}" BorderBrush="{x:Null}" FontSize="20" FontWeight="Bold" FontFamily="Gadugi"/>
         </hc:SimplePanel>
         <hc:SimplePanel Background="#FF1D2021" HorizontalAlignment="Left" Width="1010" Grid.Column="1" VerticalAlignment="Top" ScrollViewer.CanContentScroll="True" Grid.IsSharedSizeScope="True" ClipToBounds="True" Height="104" Grid.Row="1" Margin="0,212,0,0" Grid.RowSpan="2">
-            <Button x:Name="Titanfall_2_Btn" Content="Launch Vanilla Titanfall 2" Height="54" Width="430" Background="#FF2C4C4C" BorderThickness="1,1,1,1" BorderBrush="{x:Null}" HorizontalAlignment="Left" Margin="35,0,0,0" MouseEnter="Titanfall_2_Btn_MouseEnter" Click="Titanfall_2_Btn_Click" />
-            <Button x:Name="Northstar_Btn" Content="Launch +NorthStar" Height="54" Background="#FF2C4C4C" BorderThickness="1,1,1,1" BorderBrush="#FF02FFB4" HorizontalAlignment="Stretch" Margin="524,0,35,0" MouseEnter="Northstar_Btn_MouseEnter" Click="Northstar_Btn_Click" Width="430"  />
+            <Button x:Name="Titanfall_2_Btn" Content="启动《泰坦陨落2》原版" Height="54" Width="430" Background="#FF2C4C4C" BorderThickness="1,1,1,1" BorderBrush="{x:Null}" HorizontalAlignment="Left" Margin="35,0,0,0" MouseEnter="Titanfall_2_Btn_MouseEnter" Click="Titanfall_2_Btn_Click" />
+            <Button x:Name="Northstar_Btn" Content="启动北极星CN" Height="54" Background="#FF2C4C4C" BorderThickness="1,1,1,1" BorderBrush="#FF02FFB4" HorizontalAlignment="Stretch" Margin="524,0,35,0" MouseEnter="Northstar_Btn_MouseEnter" Click="Northstar_Btn_Click" Width="430"  />
         </hc:SimplePanel>
 
 
@@ -105,21 +105,21 @@
                 <ListBox x:Name="Enabled_ListBox"  Margin="550,60,30,60" BorderBrush="#FF545454" Background="#FF333333"/>
                 <Button x:Name="Enable_Mod" Content="" Height="51" Width="56" Margin="0,110,0,0" VerticalAlignment="Top" Background="{StaticResource Enable_Button}" BorderBrush="{x:Null}" Click="Enable_Mod_Click"/>
                 <Button x:Name="Disable_Mod" Content="" Height="51" Width="56" Margin="0,212,0,0" VerticalAlignment="Top" Background="{StaticResource Disable_Button}" BorderBrush="{x:Null}" Click="Disable_Mod_Click"/>
-                <Button x:Name="Apply_Btn" Content="Apply" Width="890" Margin="0,0,0,13" VerticalAlignment="Bottom" Background="#FF2C4C4C" BorderBrush="{x:Null}" Height="30" Click="Apply_Btn_Click"/>
-                <Label Content="MODS" Height="44" Width="190" Margin="0,-201,0,0" VerticalAlignment="Top" Background="{x:Null}" BorderBrush="{x:Null}" FontSize="20" FontWeight="Bold" FontFamily="Gadugi"/>
+                <Button x:Name="Apply_Btn" Content="保存" Width="890" Margin="0,0,0,13" VerticalAlignment="Bottom" Background="#FF2C4C4C" BorderBrush="{x:Null}" Height="30" Click="Apply_Btn_Click"/>
+                <Label Content="模组管理器" Height="44" Width="190" Margin="0,-201,0,0" VerticalAlignment="Top" Background="{x:Null}" BorderBrush="{x:Null}" FontSize="20" FontWeight="Bold" FontFamily="Gadugi"/>
 
             </hc:SimplePanel>
             <hc:SimplePanel Margin="30,59,30,444">
                 <Border BorderThickness="1" Background="#FF101010" Height="129" VerticalAlignment="Bottom" >
-                    <Label Content="Browse for Local Mod Zip" Margin="32,40,0,61" Background="{x:Null}" BorderBrush="{x:Null}" HorizontalAlignment="Left" Foreground="White" FontFamily="Gadugi" FontWeight="Normal" VerticalAlignment="Stretch" Width="141" Padding="0,0,0,0"/>
+                    <Label Content="选择本地Mod包" Margin="32,40,0,61" Background="{x:Null}" BorderBrush="{x:Null}" HorizontalAlignment="Left" Foreground="White" FontFamily="Gadugi" FontWeight="Normal" VerticalAlignment="Stretch" Width="141" Padding="0,0,0,0"/>
                 </Border>
                 <hc:TextBox x:Name="Browse_For_MOD" TextWrapping="Wrap" Margin="35,0,0,26" SelectionTextBrush="Black" Background="White" BorderBrush="{x:Null}" Height="32" VerticalAlignment="Bottom" HorizontalAlignment="Left" Width="780" TextChanged="Browse_For_MOD_TextChanged" Foreground="Black"/>
-                <Button x:Name="Browse_For_Mod_zip_Btn" Content="Browse" HorizontalAlignment="Left" BorderBrush="{x:Null}" Margin="820,0,0,27" VerticalAlignment="Bottom" Background="#FF2C4C4C" Height="32" Width="100" BorderThickness="1,1,1,1" Padding="6,6,10,6" Click="Browse_For_Mod_zip_Btn_Click"/>
+                <Button x:Name="Browse_For_Mod_zip_Btn" Content="浏览..." HorizontalAlignment="Left" BorderBrush="{x:Null}" Margin="820,0,0,27" VerticalAlignment="Bottom" Background="#FF2C4C4C" Height="32" Width="100" BorderThickness="1,1,1,1" Padding="6,6,10,6" Click="Browse_For_Mod_zip_Btn_Click"/>
 
             </hc:SimplePanel>
             <Label Content="MODS" Height="44" Width="190" Margin="0,10,0,0" VerticalAlignment="Top" Background="{x:Null}" BorderBrush="{x:Null}" FontSize="20" FontWeight="Bold" FontFamily="Gadugi" Visibility="Hidden"/>
-            <Label Content="Disabled" Height="44" Width="190" HorizontalAlignment="Left" Margin="148,224,0,0" VerticalAlignment="Top" Background="{x:Null}" BorderBrush="{x:Null}" FontSize="14" FontWeight="Normal" FontFamily="Gadugi"/>
-            <Label Content="Enabled" Height="44" Width="190" HorizontalAlignment="Left" Margin="664,224,0,0" VerticalAlignment="Top" Background="{x:Null}" BorderBrush="{x:Null}" FontSize="14" FontWeight="Normal" FontFamily="Gadugi"/>
+            <Label Content="禁用的模组" Height="44" Width="190" HorizontalAlignment="Left" Margin="148,224,0,0" VerticalAlignment="Top" Background="{x:Null}" BorderBrush="{x:Null}" FontSize="14" FontWeight="Normal" FontFamily="Gadugi"/>
+            <Label Content="启用的模组" Height="44" Width="190" HorizontalAlignment="Left" Margin="664,224,0,0" VerticalAlignment="Top" Background="{x:Null}" BorderBrush="{x:Null}" FontSize="14" FontWeight="Normal" FontFamily="Gadugi"/>
 
         </hc:SimplePanel>
 
@@ -181,7 +181,7 @@
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
-                <Label Content="BROWSE" Height="44" Width="190" VerticalAlignment="Top" Background="{x:Null}" BorderBrush="{x:Null}" FontSize="20" FontWeight="Bold" FontFamily="Gadugi" Margin="0,2,0,0"/>
+                <Label Content="模组商店" Height="44" Width="190" VerticalAlignment="Top" Background="{x:Null}" BorderBrush="{x:Null}" FontSize="20" FontWeight="Bold" FontFamily="Gadugi" Margin="0,2,0,0"/>
 
 
 
@@ -189,7 +189,7 @@
             </hc:SimplePanel>
             <hc:LoadingLine x:Name="Load_Line" Margin="57,540,55,0" DotCount="8" DotSpeed="5" Height="6" VerticalAlignment="Top" IsRunning="False"/>
 
-            <Button x:Name="Load" Content="Refresh" Height="39" Width="580" Click="Load_Click" Margin="0,551,0,0" VerticalAlignment="Top" Background="#FF2C4C4C" BorderBrush="{x:Null}"/>
+            <Button x:Name="Load" Content="刷新" Height="39" Width="580" Click="Load_Click" Margin="0,551,0,0" VerticalAlignment="Top" Background="#FF2C4C4C" BorderBrush="{x:Null}"/>
 
         </hc:SimplePanel>
 
@@ -204,7 +204,7 @@
         <hc:SimplePanel x:Name="skins_Panel" Background="{DynamicResource BG_PANELS}" Visibility="Hidden" Margin="190,0,0,2" Grid.ColumnSpan="2" Grid.RowSpan="2">
             <hc:SimplePanel Margin="30,59,30,444">
                 <Border BorderThickness="1" Background="#FF101010" Height="129" VerticalAlignment="Bottom" >
-                    <Label Content="Locate Skin Zip" Margin="24,28,0,55" Background="{x:Null}" BorderBrush="{x:Null}" HorizontalAlignment="Left" Foreground="White" FontFamily="Gadugi" FontWeight="Normal" VerticalAlignment="Stretch" Height="44" Width="109"/>
+                    <Label Content="选择目标ZIP" Margin="24,28,0,55" Background="{x:Null}" BorderBrush="{x:Null}" HorizontalAlignment="Left" Foreground="White" FontFamily="Gadugi" FontWeight="Normal" VerticalAlignment="Stretch" Height="44" Width="109"/>
                 </Border>
                 <hc:TextBox x:Name="Skin_Path_Box" TextWrapping="Wrap" Margin="35,0,0,26" SelectionTextBrush="Black" Background="White" BorderBrush="{x:Null}" Height="32" VerticalAlignment="Bottom" HorizontalAlignment="Left" Width="780" Foreground="Black"/>
                 <Button x:Name="Browse_For_Skin" Content="Browse" HorizontalAlignment="Left" BorderBrush="{x:Null}" Margin="820,0,0,27" VerticalAlignment="Bottom" Background="#FF1E4C51" Height="32" Width="100" BorderThickness="1,1,1,1" Padding="6,6,10,6" Click="Browse_For_Skin_Click"/>
@@ -212,7 +212,7 @@
             </hc:SimplePanel>
             <hc:SimplePanel Margin="30,209,30,10" Background="#FF101010">
 
-                <Label Content="Compatible?" Background="{x:Null}" BorderBrush="{x:Null}" Foreground="White" FontFamily="Gadugi" FontWeight="Normal" VerticalAlignment="Top" Width="110" Margin="420,6,420,0" Height="44" HorizontalAlignment="Stretch"/>
+                <Label Content="兼容性指示器" Background="{x:Null}" BorderBrush="{x:Null}" Foreground="White" FontFamily="Gadugi" FontWeight="Normal" VerticalAlignment="Top" Width="110" Margin="420,6,420,0" Height="44" HorizontalAlignment="Stretch"/>
 
                 <Ellipse x:Name="Compat_Indicator" Grid.Column="1" Margin="452,50,0,0" Fill="White" Height="50" VerticalAlignment="Top" HorizontalAlignment="Left" Width="50"/>
 
@@ -221,7 +221,7 @@
                 <Label Content="Glow" Margin="663,311,0,0" Background="{x:Null}" BorderBrush="{x:Null}" Foreground="White" FontFamily="Gadugi" FontWeight="Normal" VerticalAlignment="Top" Height="27" Width="110" HorizontalAlignment="Left"/>
                 <Image x:Name="Diffuse_IMG" HorizontalAlignment="Left" Height="256" VerticalAlignment="Top" Width="256" Margin="104,56,0,0" Source="/Resources/NO_TEXTURE.png"/>
                 <Image x:Name="Glow_IMG" Height="256" VerticalAlignment="Top" Margin="590,56,104,0" Source="/Resources/NO_TEXTURE.png"/>
-                <Button x:Name="Install_Skin_Bttn" Content="Install Skin" Width="366" Margin="0,351,0,0" VerticalAlignment="Top" BorderBrush="{x:Null}" Background="#FF2C4C4C" Height="30" Click="Install_Skin_Bttn_Click"/>
+                <Button x:Name="Install_Skin_Bttn" Content="安装皮肤" Width="366" Margin="0,351,0,0" VerticalAlignment="Top" BorderBrush="{x:Null}" Background="#FF2C4C4C" Height="30" Click="Install_Skin_Bttn_Click"/>
             </hc:SimplePanel>
             <Label Content="SKINS" Height="44" Width="190" Margin="0,10,0,0" VerticalAlignment="Top" Background="{x:Null}" BorderBrush="{x:Null}" FontSize="20" FontWeight="Bold" FontFamily="Gadugi"/>
         </hc:SimplePanel>
@@ -234,15 +234,15 @@
 
 
         <hc:SimplePanel x:Name="Dedicated_Server_Panel" Background="{DynamicResource BG_PANELS}" Visibility="Hidden" Margin="190,0,0,2" Grid.ColumnSpan="2" Grid.RowSpan="2" ScrollViewer.VerticalScrollBarVisibility="Disabled">
-            <Button x:Name="Launch_Northstar_Advanced" Content="Launch Northstar Advanced" Height="40" Width="392" Margin="0,207,0,0" VerticalAlignment="Top" Click="Launch_Northstar_Advanced_Click" BorderBrush="White" Background="#FF085F36"/>
+            <Button x:Name="Launch_Northstar_Advanced" Content="启动北极星CN客户端" Height="40" Width="392" Margin="0,207,0,0" VerticalAlignment="Top" Click="Launch_Northstar_Advanced_Click" BorderBrush="White" Background="#FF085F36"/>
             <hc:TextBox x:Name="Arg_Box" HorizontalAlignment="Center" Height="38" TextWrapping="Wrap" VerticalAlignment="Top" Width="392" Margin="0,164,0,0" IsReadOnly="True"/>
-            <Button x:Name="Dedicated_Btn" Content="Launch Dedicated Northstar Client" Height="40" Width="392" Margin="0,377,0,0" VerticalAlignment="Top" Click="Dedicated_Btn_Click" BorderBrush="White" Background="#FF282C50"/>
+            <Button x:Name="Dedicated_Btn" Content="启动北极星CN独立服务器" Height="40" Width="392" Margin="0,377,0,0" VerticalAlignment="Top" Click="Dedicated_Btn_Click" BorderBrush="White" Background="#FF282C50"/>
             <hc:TextBox x:Name="Arg_Box_Dedi" HorizontalAlignment="Center" Height="38" TextWrapping="Wrap" VerticalAlignment="Top" Width="392" Margin="0,334,0,0" IsReadOnly="True"/>
-            <CheckBox x:Name="Ns_Args_Dedi" Content="DO NOT Overwrite &quot;ns startup args dedi.txt&quot;" HorizontalAlignment="Center" Height="30" Width="274" Margin="0,490,0,0" VerticalAlignment="Top" Checked="Ns_Args_Dedi_Checked" Unchecked="Ns_Args_Dedi_Unchecked"/>
-            <CheckBox x:Name="Ns_Args" Content="DO NOT Overwrite &quot;ns startup args.txt&quot;" HorizontalAlignment="Center" Height="30" Width="254" Margin="0,455,0,0" VerticalAlignment="Top" Unchecked="Ns_Args_Unchecked" Checked="Ns_Args_Checked"/>
-            <Label Content="Startup Arguments Northstar Dedicated Client" Height="35" Width="350" BorderBrush="{x:Null}" Background="{x:Null}"/>
-            <Label Content="Startup Arguments Northstar Client" Height="35" Width="350" Margin="0,124,0,0" VerticalAlignment="Top" BorderBrush="{x:Null}" Background="{x:Null}"/>
-            <Label Content="This Section Allows For Some More advanced Settings to be Used.                                 " Height="35" Width="392" Margin="0,37,0,0" VerticalAlignment="Top" BorderBrush="{x:Null}" Background="{x:Null}" FontSize="14" FontStyle="Normal" FontWeight="Thin" Padding="0,0,0,0"/>
+            <CheckBox x:Name="Ns_Args_Dedi" Content="不覆盖 &quot;ns startup args dedi.txt&quot;" HorizontalAlignment="Center" Height="30" Width="274" Margin="0,490,0,0" VerticalAlignment="Top" Checked="Ns_Args_Dedi_Checked" Unchecked="Ns_Args_Dedi_Unchecked"/>
+            <CheckBox x:Name="Ns_Args" Content="不覆盖 &quot;ns startup args.txt&quot;" HorizontalAlignment="Center" Height="30" Width="254" Margin="0,455,0,0" VerticalAlignment="Top" Unchecked="Ns_Args_Unchecked" Checked="Ns_Args_Checked"/>
+            <Label Content="北极星CN独立服务器启动选项" Height="35" Width="350" BorderBrush="{x:Null}" Background="{x:Null}"/>
+            <Label Content="北极星CN客户端启动选项" Height="35" Width="350" Margin="0,124,0,0" VerticalAlignment="Top" BorderBrush="{x:Null}" Background="{x:Null}"/>
+            <Label Content="这里可以更改一些高级启动选项" Height="35" Width="392" Margin="0,37,0,0" VerticalAlignment="Top" BorderBrush="{x:Null}" Background="{x:Null}" FontSize="14" FontStyle="Normal" FontWeight="Thin" Padding="0,0,0,0"/>
 
         </hc:SimplePanel>
 
@@ -256,8 +256,8 @@
                 </FlowDocument>
             </RichTextBox>
             <hc:SimplePanel Margin="32,495,32,0" Background="#FF101010" Height="104" VerticalAlignment="Top">
-                <Button x:Name="Save_LOG" Content="Save Log" Height="36" HorizontalAlignment="Left" Margin="52,34,0,0" Width="338" VerticalAlignment="Top" Background="#FF1E4C51" BorderBrush="#FF00FFCA" Click="Save_LOG_Click"/>
-                <Button x:Name="Clear_LOG" Content="Clear Log" Height="36" HorizontalAlignment="Stretch" Margin="568,0,40,0" Background="#FF1E4C51" Click="Clear_LOG_Click"/>
+                <Button x:Name="Save_LOG" Content="保存日志" Height="36" HorizontalAlignment="Left" Margin="52,34,0,0" Width="338" VerticalAlignment="Top" Background="#FF1E4C51" BorderBrush="#FF00FFCA" Click="Save_LOG_Click"/>
+                <Button x:Name="Clear_LOG" Content="清除日志" Height="36" HorizontalAlignment="Stretch" Margin="568,0,40,0" Background="#FF1E4C51" Click="Clear_LOG_Click"/>
             </hc:SimplePanel>
             <hc:SimplePanel/>
             <Label Content="LOG" Width="190" Margin="0,8,0,0" VerticalAlignment="Top" Background="{x:Null}" BorderBrush="{x:Null}" FontSize="20" FontWeight="Bold" FontFamily="Gadugi" Height="44" Padding="10,3,10,3"/>
@@ -303,44 +303,44 @@
                     <hc:EventToCommand Command="{Binding SwitchItemCmd}" PassEventArgsToCommand="True" />
                 </hc:EventTrigger>
             </hc:Interaction.Triggers>
-            <hc:SideMenuItem x:Name="Main" Header="Main" Selected="SideMenuItem_Selected" Margin="4,0,0,0" Background="#FF101010">
+            <hc:SideMenuItem x:Name="Main" Header="主页" Selected="SideMenuItem_Selected" Margin="4,0,0,0" Background="#FF101010">
                 <hc:SideMenuItem.Icon>
                     <Image Source="/Resources/home.png" Width="24" Height="24"/>
                 </hc:SideMenuItem.Icon>
 
             </hc:SideMenuItem>
-            <hc:SideMenuItem x:Name="Mods" Header="Mods" Selected="Mods_Selected" Margin="4,0,0,0" Background="#FF101010">
+            <hc:SideMenuItem x:Name="Mods" Header="模组管理" Selected="Mods_Selected" Margin="4,0,0,0" Background="#FF101010">
                 <hc:SideMenuItem.Icon>
                     <Image Source="/Resources/folder.png" Width="24" Height="24"/>
                 </hc:SideMenuItem.Icon>
             </hc:SideMenuItem>
-            <hc:SideMenuItem x:Name="Mod_Browse" Header="Mod Browse" Margin="4,0,0,0" Background="#FF101010">
+            <hc:SideMenuItem x:Name="Mod_Browse" Header="模组商店" Margin="4,0,0,0" Background="#FF101010">
                 <hc:SideMenuItem.Icon>
                     <Image Source="/Resources/internet.png" Width="24" Height="24"/>
                 </hc:SideMenuItem.Icon>
             </hc:SideMenuItem>
-            <hc:SideMenuItem x:Name="Skins" Header="Skins" Margin="4,0,0,0" Background="#FF101010">
+            <hc:SideMenuItem x:Name="Skins" Header="皮肤安装器" Margin="4,0,0,0" Background="#FF101010">
                 <hc:SideMenuItem.Icon>
                     <Image Source="/Resources/target.png" Width="24" Height="24"/>
                 </hc:SideMenuItem.Icon>
 
             </hc:SideMenuItem>
-            <hc:SideMenuItem x:Name="Server_Configuration" Header="Dedicated Server" Margin="4,0,0,0" Background="#FF101010">
+            <hc:SideMenuItem x:Name="Server_Configuration" Header="服务器启动器" Margin="4,0,0,0" Background="#FF101010">
                 <hc:SideMenuItem.Icon>
                     <Image Source="/Resources/Server_ICON.png" Width="24" Height="24"/>
                 </hc:SideMenuItem.Icon>
             </hc:SideMenuItem>
-            <hc:SideMenuItem x:Name="Log" Header="Log" Margin="4,0,0,0" Background="#FF101010">
+            <hc:SideMenuItem x:Name="Log" Header="日志" Margin="4,0,0,0" Background="#FF101010">
                 <hc:SideMenuItem.Icon>
                     <Image Source="/Resources/LOG_ICON.png" Width="24" Height="24"/>
                 </hc:SideMenuItem.Icon>
             </hc:SideMenuItem>
-            <hc:SideMenuItem x:Name="Update_Tab" Header="Updates" Margin="4,0,0,0" Background="#FF101010">
+            <hc:SideMenuItem x:Name="Update_Tab" Header="更新" Margin="4,0,0,0" Background="#FF101010">
                 <hc:SideMenuItem.Icon>
                     <Image Source="/Resources/Update_ICON.png" Width="24" Height="24"/>
                 </hc:SideMenuItem.Icon>
             </hc:SideMenuItem>
-            <hc:SideMenuItem x:Name="About" Header="About" Margin="4,0,0,0" Background="#FF101010">
+            <hc:SideMenuItem x:Name="About" Header="关于" Margin="4,0,0,0" Background="#FF101010">
                 <hc:SideMenuItem.Icon>
                     <Image Source="/Resources/info.png" Width="24" Height="24"/>
                 </hc:SideMenuItem.Icon>
