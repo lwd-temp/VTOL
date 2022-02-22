@@ -5,13 +5,12 @@
     <TargetFramework>net6.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <UseWPF>true</UseWPF>
-    <ApplicationIcon>Resources\32x32.ico</ApplicationIcon>
-    <PackageIcon>Northstar-512.png</PackageIcon>
-    <AssemblyVersion>1.2.1</AssemblyVersion>
-    <FileVersion>1.2.1</FileVersion>
+    <ApplicationIcon>Resources\ICON_32.ico</ApplicationIcon>
+    <PackageIcon>VTOL_Hover.png</PackageIcon>
+    <AssemblyVersion>1.2.0</AssemblyVersion>
+    <FileVersion>1.2.0</FileVersion>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <PackageTags>Mod_Manager;Installer;VTOL</PackageTags>
-    <DebugType>embedded</DebugType>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,11 +22,8 @@
 
   <ItemGroup>
     <None Remove="Banner_normal.jpg" />
-    <None Remove="Resources\32x32.ico" />
     <None Remove="Resources\Banner_normal.jpg" />
     <None Remove="Resources\bestboy.png" />
-    <None Remove="Resources\BG.jpg" />
-    <None Remove="Resources\BG_Drag_Drop.gif" />
     <None Remove="Resources\BG_Panels.png" />
     <None Remove="Resources\Disable_Img.png" />
     <None Remove="Resources\download_icon.png" />
@@ -40,12 +36,8 @@
     <None Remove="Resources\info.png" />
     <None Remove="Resources\internet.png" />
     <None Remove="Resources\like.png" />
-    <None Remove="Resources\Lock_BW.png" />
-    <None Remove="Resources\Lock_WB.png" />
     <None Remove="Resources\LOG_ICON.png" />
     <None Remove="Resources\main-menu.png" />
-    <None Remove="Resources\Northstar-512-maskable.png" />
-    <None Remove="Resources\Northstar512-maskable.ico" />
     <None Remove="Resources\NorthStar_Smurfson.gif" />
     <None Remove="Resources\NO_TEXTURE.png" />
     <None Remove="Resources\NO_TEXTURE.png" />
@@ -54,7 +46,6 @@
     <None Remove="Resources\Server_ICON.png" />
     <None Remove="Resources\space-invaders-gif-6.gif" />
     <None Remove="Resources\target.png" />
-    <None Remove="Resources\Test_Args_1.json" />
     <None Remove="Resources\TF2_Vanilla_promo.gif" />
     <None Remove="Resources\Update_ICON.png" />
     <None Remove="Resources\VTOL_Hover.ico" />
@@ -75,26 +66,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="Resources\32x32.ico" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <DesignDataWithDesignTimeCreatableTypes Include="Resources\Northstar-512.ico">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </DesignDataWithDesignTimeCreatableTypes>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Resource Include="Resources\32x32.ico">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Resource>
     <Resource Include="Resources\bestboy.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Resource>
-    <Resource Include="Resources\BG.jpg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Resource>
-    <Resource Include="Resources\BG_Drag_Drop.gif">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Resources\BG_Panels.png">
@@ -129,7 +101,6 @@
 
   <ItemGroup>
     <PackageReference Include="Aspose.Zip" Version="22.1.0" />
-    <PackageReference Include="AutoCompleteTextBox" Version="1.3.0" />
     <PackageReference Include="HandyControls" Version="3.3.11" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="Octokit" Version="0.50.0" />
@@ -139,12 +110,6 @@
     <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="1.0.0-beta0005" />
     <PackageReference Include="WpfAnimatedGif" Version="2.0.2" />
     <PackageReference Include="XamlAnimatedGif" Version="2.0.2" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="Utils">
-      <HintPath>Utils.dll</HintPath>
-    </Reference>
   </ItemGroup>
 
   <ItemGroup>
@@ -166,25 +131,10 @@
     <Resource Include="Resources\like.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
-    <Resource Include="Resources\Lock_BW.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Resource>
-    <Resource Include="Resources\Lock_WB.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Resource>
     <Resource Include="Resources\LOG_ICON.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Resources\main-menu.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Resource>
-    <Resource Include="Resources\Northstar-512-maskable.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Resource>
-    <Resource Include="Resources\Northstar-512.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Resource>
-    <Resource Include="Resources\Northstar512-maskable.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Resources\NorthStar_Smurfson.gif">
@@ -207,9 +157,6 @@
     </Resource>
     <Resource Include="Resources\target.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Resource>
-    <Resource Include="Resources\Test_Args_1.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Resources\TF2_Vanilla_promo.gif">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -240,10 +187,6 @@
     <None Update="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
-    </None>
-    <None Update="Resources\Northstar-512.png">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
     </None>
   </ItemGroup>
 

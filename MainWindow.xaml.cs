@@ -26,12 +26,6 @@ using Newtonsoft.Json.Linq;
 using Microsoft.Win32;
 using System.Collections;
 using System.Collections.ObjectModel;
-using System.Text.RegularExpressions;
-using System.Windows.Media.Animation;
-using Utils.Extensions;
-using static VTOL.MainWindow;
-using Microsoft.Xaml.Behaviors;
-using System.Threading;
 //****TODO*****//
 
 //Migrate Release Parse to the New Updater Sys
@@ -42,58 +36,11 @@ using System.Threading;
 //**************//
 namespace VTOL
 {
-   
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
-    /// 
-
-    public class Server_Template_Selector : DataTemplateSelector
-    {
-        public override DataTemplate SelectTemplate(object item, DependencyObject container)
-        {
-            FrameworkElement element = container as FrameworkElement;
-
-            var Item = item as Arg_Set;
-            if (Item == null) { return null; }
-                
-            if (Item.Type == "PORT" || Item.Type == "STRING" || Item.Type=="STRINGQ")
-                return
-                    element.FindResource("NormalBox")
-                    as DataTemplate;
-           else if (Item.Type == "INT")
-                return
-                    element.FindResource("IntBox")
-                    as DataTemplate;
-            else if (Item.Type == "FLOAT")
-                return
-                    element.FindResource("FloatBox")
-                    as DataTemplate;
-            else if (Item.Type == "BOOL")
-                return
-                    element.FindResource("BOOLBox")
-                    as DataTemplate;
-            else if (Item.Type == "ONE_SELECT")
-                return
-                    element.FindResource("One_Select_Combo")
-                    as DataTemplate;
-             else
-                return
-                    element.FindResource("ComboBox")
-                    as DataTemplate;
-
-
-        }
-
-
-
-      
-
-    }
-   
     public partial class MainWindow : Window
     {
-       
 
         BitmapImage Vanilla = new BitmapImage(new Uri(@"/Resources/TF2_Vanilla_promo.gif", UriKind.Relative));
         BitmapImage Northstar = new BitmapImage(new Uri(@"/Resources/Northstar_Smurfson.gif", UriKind.Relative));
@@ -103,7 +50,7 @@ namespace VTOL
         List<string> Mod_Directory_List_InActive = new List<string>();
         private static String updaterModulePath;
         private readonly CollectionViewSource viewSource = new CollectionViewSource();
-        public Server_Setup Server_Json;
+
         public bool Found_Install_Folder = false;
         public string Current_Install_Folder = "";
         private string NSExe;
@@ -117,23 +64,26 @@ namespace VTOL
         bool do_not_overwrite_Ns_file_Dedi = true;
         ArrayList itemsList = new ArrayList();
         ArrayList Mirror_Item_List = new ArrayList();
-        public IEnumerable<string> Phrases { get; private set; }
-        public List<string> Game_Modes_List = new List<string>();
-        public List<string> Game_MAP_List = new List<string>();
-        public List<string> Game_WEAPON_List = new List<string>();
+        private ICollectionView phrasesView;
+        private string filter;
 
-        int completed_flag;
+        public ObservableCollection<string> Phrases { get; private set; }
+        bool advanced_Mode = false;
+        private int completed_flag;
         public int pid;
+        string current_Ver;
         string Skin_Path = "";
         string Skin_Temp_Loc = "";
-      
+        string col_path = "";
+        string ilum_path = "";
+        bool Auto_Client_Updates = false;
+        Image Defualt_Image_Vanilla;
+        Image Defualt_Image_NS;
         public Thunderstore_V1 Thunderstore_;
         Updater Update;
         public bool Animation_Start_Northstar { get; set; }
         public bool Animation_Start_Vanilla { get; set; }
-        public string Ns_dedi_File = "";
-        public string Convar_File = "";
-        bool Started_Selection = false;
+        
         public MainWindow()
         {
             InitializeComponent();
@@ -144,21 +94,13 @@ namespace VTOL
             try
             {
 
-                Phrases = new ObservableCollection<string>();
-              
 
-                //BG_panel_Main.BlurApply(40, new TimeSpan(0, 0, 1), TimeSpan.Zero);
-                Phrases.Append("gg");
-                Phrases.Append("private_match");
-                Phrases.Append("at");
-                Phrases.Append("cl");
-                DataContext = this;
                 Animation_Start_Northstar = false;
                 Animation_Start_Vanilla = false;
                 Write_To_Log("", true);
                 LOG_BOX.IsReadOnly = true;
                 Mod_Panel.Visibility = Visibility.Hidden;
-                //  Load_Line.Visibility = Visibility.Hidden;
+                Load_Line.Visibility = Visibility.Hidden;
                 skins_Panel.Visibility = Visibility.Hidden;
                 Main_Panel.Visibility = Visibility.Visible;
                 About_Panel.Visibility = Visibility.Hidden;
@@ -167,8 +109,6 @@ namespace VTOL
                 Dedicated_Server_Panel.Visibility = Visibility.Hidden;
                 Log_Panel.Visibility = Visibility.Hidden;
                 Updates_Panel.Visibility = Visibility.Hidden;
-                Drag_Drop_Overlay.Visibility = Visibility.Hidden;
-                Drag_Drop_Overlay_Skins.Visibility = Visibility.Hidden;
                 Select_Main();
                 string version = Assembly.GetExecutingAssembly().GetName().Version.ToString();
                 Install_Skin_Bttn.IsEnabled = false;
@@ -179,7 +119,7 @@ namespace VTOL
                 Check_For_New_Northstar_Install();
                 GC.Collect();
 
-                if (do_not_overwrite_Ns_file==true)
+                if (do_not_overwrite_Ns_file == true)
                 {
                     Ns_Args.IsChecked = true;
 
@@ -208,14 +148,11 @@ namespace VTOL
 
                 string Header = Path.GetFullPath(Path.Combine(System.Reflection.Assembly.GetExecutingAssembly().Location, @"../"));
                 updaterModulePath = Path.Combine(Header, "VTOL_Updater.exe");
-               
             }
 
             catch (System.IO.DirectoryNotFoundException e)
             {
                 Write_To_Log("Could Not Verify Dir" + Current_Install_Folder);
-                Write_To_Log(e.StackTrace);
-
                 HandyControl.Controls.Growl.ErrorGlobal("\nVTOL tried to check for an existing config (cfg), please manually select it.");
                 //log.AppendText("\nThe Launcher Tried to Auto Check For an existing CFG, please use the manual Check to search.");
 
@@ -319,7 +256,6 @@ namespace VTOL
             {
                 Console.WriteLine("无法验证目录：" + Current_Install_Folder);
                 Send_Warning_Notif("\nThe Launcher Tried to Auto Check For an existing CFG, please use the manual Check to search.");
-                Write_To_Log(e.StackTrace);
 
 
 
@@ -364,7 +300,7 @@ namespace VTOL
 
         }
 
-       async  Task  Thunderstore_Parse()
+        async Task Thunderstore_Parse()
 
 
         {
@@ -479,28 +415,7 @@ namespace VTOL
 
         private ArrayList LoadListViewData()
         {
-            /*
-             * 
-             * 
-             * 
-             * 
-             * 
-             * 
-             * 
-             * 
-             * 
-             * 
-             * ADDDDDDDDDDD DOWNLOAD PROGRES!!!!!!!!!!!!!!
-             * 
-             * 
-             * 
-             * 
-             * 
-             * 
-             * 
-             * 
-             * 
-             */
+
             // var myValue = ((Button)sender).Tag;
             string ICON = "";
             List<string> lst = new List<string> { };
@@ -570,7 +485,7 @@ namespace VTOL
                 //  }
 
                 //itemsList.Add(new Button {  Name = item.full_name.ToString() , Icon = item.latest.icon,date_created = item.date_created.ToString(), description = item.latest.description, owner=item.owner, Rating = rating});
-                itemsList.Add(new Button { Name = item.Name, Icon = ICON, date_created = item.DateCreated.ToString(), description = Descrtiption, owner=item.Owner, Rating = rating, download_url = download_url +"|"+item.FullName.ToString(), Webpage  = item.PackageUrl, File_Size = FileSize, Tag = Tags, Downloads = downloads });
+                itemsList.Add(new Button { Name = item.Name, Icon = ICON, date_created = item.DateCreated.ToString(), description = Descrtiption, owner = item.Owner, Rating = rating, download_url = download_url + "|" + item.FullName.ToString(), Webpage = item.PackageUrl, File_Size = FileSize, Tag = Tags, Downloads = downloads });
                 Mirror_Item_List.Add(item.Name);
 
                 // itemsList.Add(item.full_name.ToString());
@@ -616,7 +531,10 @@ Big Thanks to -
 @EmmaM#6474
 @laundmo#7544
 @E3VL#6669
-Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/Ju1cy ";
+
+
+
+Every cent counts towards feeding my baby Ticks - https://www.patreon.com/Juicy_ ";
             About_BOX.Document.Blocks.Clear();
             Run run = new Run(Text);
             paragraph.Inlines.Add(run);
@@ -755,6 +673,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             Log_Panel.Visibility = Visibility.Hidden;
             Updates_Panel.Visibility = Visibility.Hidden;
 
+            Check_Args();
             Skins.IsSelected = false;
             Main.IsSelected = false;
             About.IsSelected = false;
@@ -763,7 +682,6 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             Mod_Browse.IsSelected = false;
             Update_Tab.IsSelected = false;
             Log.IsSelected = false;
-
 
         }
         void Select_Log()
@@ -891,7 +809,6 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
         }
         void Send_Fatal_Notif(string Input_Message)
         {
-
 
             HandyControl.Controls.Growl.FatalGlobal(Input_Message);
             Write_To_Log("\n" + Input_Message + '\n' + DateTime.Now.ToString());
@@ -1129,7 +1046,6 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             catch (System.IO.FileNotFoundException e)
             {
                 Send_Error_Notif("Could Not find " + Filepath);
-                Write_To_Log(e.StackTrace);
 
 
             }
@@ -1157,7 +1073,6 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             catch (System.IO.FileNotFoundException e)
             {
                 Send_Error_Notif("Could Not find " + Filepath);
-                Write_To_Log(e.StackTrace);
 
 
             }
@@ -1281,7 +1196,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
 
                 return null;
             }
-          
+            return null;
 
         }
         private void Parse_Release(string json_name = "temp.json")
@@ -1695,7 +1610,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
         }
         void WalkDirectoryTree(System.IO.DirectoryInfo root, String Search)
         {
-           // System.IO.FileInfo[] files = null;
+            System.IO.FileInfo[] files = null;
             System.IO.DirectoryInfo[] subDirs = null;
 
             //// First, process all the files directly under this folder
@@ -2127,31 +2042,27 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             if (Directory.Exists(Current_Install_Folder))
             {
 
-
-                if (File.Exists(Ns_dedi_File))
+                if (File.Exists(Current_Install_Folder + @"\ns_startup_args_dedi.txt"))
                 {
-                    Dedicated_Server_Startup_ARGS.Text = Ns_dedi_File;
-                    Dedicated_Server_Startup_ARGS.Background = Brushes.White;
                     Arg_Box_Dedi.Text = "x";
-                    Arg_Box_Dedi.Text = Read_From_TextFile_OneLine(Ns_dedi_File);
+                    Arg_Box_Dedi.Text = Read_From_TextFile_OneLine(Current_Install_Folder + @"\ns_startup_args_dedi.txt");
                     GC.Collect();
 
 
                 }
                 else
                 {
-                    Send_Error_Notif("Err, File not found , please set it in filepaths!");
+                    Console.WriteLine("Err, File not found");
                     Arg_Box_Dedi.Text = "Err, File not found - ns_startup_args_dedi.txt";
-                    Dedicated_Server_Startup_ARGS.Background = Brushes.Red;
-
                     GC.Collect();
 
                 }
 
 
-                if (File.Exists(GetFile(Current_Install_Folder, "ns_startup_args.txt").First()))
+                if (File.Exists(Current_Install_Folder + @"\ns_startup_args.txt"))
                 {
                     Arg_Box.Text = "x";
+
                     Arg_Box.Text = Read_From_TextFile_OneLine(Current_Install_Folder + @"\ns_startup_args.txt");
 
                     GC.Collect();
@@ -2159,35 +2070,18 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 }
                 else
                 {
-                    Send_Error_Notif("Err, File not found , please create it in the folder!");
+                    Console.WriteLine("Err, File not found");
                     Arg_Box.Text = "Err, File not found - ns_startup_args.txt";
                     GC.Collect();
                 }
 
-                if (File.Exists(Convar_File))
-                {
-
-                    Dedicated_Convar_ARGS.Text = Convar_File;
-                    Dedicated_Convar_ARGS.Background = Brushes.White;
-
-                    GC.Collect();
-
-                }
-                else
-                {
-                    Send_Error_Notif("Err, File not found , please set it in filepaths!");
-                    Dedicated_Convar_ARGS.Background = Brushes.Red;
-
-                    Dedicated_Convar_ARGS.Text = "Err, File not found - autoexec_ns_server.cfg";
-                    GC.Collect();
-                }
             }
 
 
             else
             {
 
-                Send_Error_Notif("Err, Folder not found");
+                Console.WriteLine("Err, Folder not found");
                 GC.Collect();
 
 
@@ -2237,7 +2131,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 }
                 else
                 {
-                    Send_Warning_Notif("Cannot Move a Mod From An empty List!");
+                    Send_Warning_Notif("Cannot Move a Mod From An emppty List!");
                     return;
 
                 }
@@ -2431,7 +2325,6 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             }
             catch (Exception ex)
             {
-                
 
                 return string.Empty;
             }
@@ -2601,10 +2494,6 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
 
         private void Titanfall_2_Btn_MouseEnter(object sender, MouseEventArgs e)
         {
-
-           //Button Bt = (Button)sender;
-           // DoubleAnimation Anim = new DoubleAnimation(0, TimeSpan.FromSeconds(2));
-
             Banner_Image.Visibility = Visibility.Hidden;
 
             Gif_Image_Northstar.Visibility = Visibility.Hidden;
@@ -2702,7 +2591,6 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             }
 
         }
-        
         private void Browse_For_Skin_Click(object sender, RoutedEventArgs e)
         {
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
@@ -2946,7 +2834,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                                     else
                                     {
                                         DDSImage img_1 = new DDSImage(firstOrDefault_Col);
-                                        img_1.Save(Thumbnail+Path.GetFileName(firstOrDefault_Col)+".png");
+                                        img_1.Save(Thumbnail + Path.GetFileName(firstOrDefault_Col) + ".png");
                                         // Image Image_1 = new Bitmap(Thumbnail+Path.GetFileName(firstOrDefault_Col)+".png");
                                         BitmapImage bitmap = new BitmapImage();
                                         bitmap.BeginInit();
@@ -2996,7 +2884,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                                     {
 
                                         DDSImage img_2 = new DDSImage(firstOrDefault_ilm);
-                                        img_2.Save(Thumbnail+Path.GetFileName(firstOrDefault_ilm)+".png");
+                                        img_2.Save(Thumbnail + Path.GetFileName(firstOrDefault_ilm) + ".png");
                                         // Image Image_2 = new Bitmap(Thumbnail+Path.GetFileName(firstOrDefault_ilm)+".png");
                                         BitmapImage bitmap = new BitmapImage();
                                         bitmap.BeginInit();
@@ -3093,7 +2981,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
         {
             Badge.Visibility = Visibility.Collapsed;
 
-            Install_NS.IsEnabled = false;
+
 
 
 
@@ -3102,7 +2990,6 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             do_not_overwrite_Ns_file = Properties.Settings.Default.Ns_Startup;
             do_not_overwrite_Ns_file_Dedi = Properties.Settings.Default.Ns_Dedi;
             Install_NS_METHOD();
-
 
         }
 
@@ -3156,9 +3043,9 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
 
         private void Enable_Mod_Click(object sender, RoutedEventArgs e)
         {
-            if (Dsiabled_ListBox.SelectedIndex == 0)
+            if (Enabled_ListBox.SelectedIndex == 0)
             {
-                Send_Warning_Notif("No Mods in List");
+                Send_Fatal_Notif("No");
             }
             Move_List_box_Inactive_To_Active(Dsiabled_ListBox);
 
@@ -3166,10 +3053,6 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
 
         private void Disable_Mod_Click(object sender, RoutedEventArgs e)
         {
-            if (Enabled_ListBox.SelectedIndex == 0)
-            {
-                Send_Warning_Notif("No Mods in List");
-            }
             Move_List_box_Active_To_Inactive(Enabled_ListBox);
 
         }
@@ -3390,28 +3273,11 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
         {
             Write_To_Log("", true);
         }
-        public async Task Run_Load_Line()
-        {
-            Load_Line.IsRunning = true;
 
-
-        }
         private async void Load_Click(object sender, RoutedEventArgs e)
         {
-            Load.IsEnabled = false;
-            Load_Line.IsRunning=true;
-            try
-            {
-                Dispatcher.BeginInvoke(
-        new ThreadStart(() => Thunderstore_Parse()));
-            }
-            finally
-            {
-                Load_Line.IsRunning=false;
-                Load.IsEnabled = true;
-            }
 
-
+            Thunderstore_Parse();
         }
 
         private void Test_List_RequestBringIntoView(object sender, RequestBringIntoViewEventArgs e)
@@ -3490,7 +3356,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
 
         private void Launch_Northstar_Advanced_Click(object sender, RoutedEventArgs e)
         {
-            if (File.Exists(Current_Install_Folder+@"\ns_startup_args.txt"))
+            if (File.Exists(Current_Install_Folder + @"\ns_startup_args.txt"))
             {
                 saveAsyncFile(Arg_Box.Text, Current_Install_Folder + @"\ns_startup_args.txt", false, false);
 
@@ -3685,1766 +3551,5 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 Write_To_Log(ex.Message);
             }
         }
-        private void Validate_Combo_Box(object sender, SelectionChangedEventArgs e)
-        {
-            try
-            {
-                if (Started_Selection == true)
-                {
-
-                    if (sender.GetType() == typeof(HandyControl.Controls.CheckComboBox))
-                    {
-                        HandyControl.Controls.CheckComboBox comboBox = (HandyControl.Controls.CheckComboBox)sender;
-                        var Var = ((HandyControl.Controls.CheckComboBox)sender).Tag.ToString();
-                        var Description = ((HandyControl.Controls.CheckComboBox)sender).ToolTip.ToString();
-
-                        string[] Split = Var.Split("|");
-                        string type = Split[0];
-                        string name = Split[1];
-                        string ARG = Split[2];
-                        Send_Info_Notif(ARG);
-                        if (ARG!= null && ARG!= "" && ARG == "CONVAR")
-                        {
-
-
-
-                            string list = String.Join(",", comboBox.SelectedItems.Cast<String>().ToArray());
-                            Write_convar_To_File(name, list, Description, true, Convar_File);
-                            if (list == "" || list == null)
-                            {
-
-                                Send_Error_Notif("No Selection!, Removing Item!");
-                                Write_convar_To_File(name, "REMOVE", Description, true, Convar_File);
-
-                            }
-                            comboBox.Foreground = Brushes.White;
-
-
-                        }
-
-                        else if (ARG!= null && ARG!= "" && ARG == "STARTUP")
-
-                        {
-                            string list = String.Join(" ", comboBox.SelectedItems.Cast<String>().ToArray());
-
-
-                            Write_Startup_Arg_To_File(name, list, false, true, Ns_dedi_File);
-                            comboBox.Foreground = Brushes.White;
-
-                        }
-                        else
-                        {
-                            Send_Error_Notif("Could Not UnderStand Input Type!");
-                        }
-                    }
-                    else
-                    {
-
-                        if (sender.GetType() == typeof(ComboBox))
-                        {
-                            ComboBox comboBox = (ComboBox)sender;
-                            var Var = comboBox.Tag.ToString();
-                            var Description = ((ComboBox)sender).ToolTip.ToString();
-
-                            string[] Split = Var.Split("|");
-                            string type = Split[0];
-                            string name = Split[1];
-                            string ARG = Split[2];
-                            if (ARG == "CONVAR")
-                            {
-
-                                if (type == "BOOL")
-                                {
-                                    if (comboBox.SelectedIndex != -1)
-                                    {
-                                        if (comboBox.SelectedIndex == 1)
-                                        {
-                                            Write_convar_To_File(name, "1", Description, false, Convar_File);
-                                            comboBox.Foreground = Brushes.White;
-
-
-                                        }
-                                        else
-                                        {
-
-
-                                            Write_convar_To_File(name, "0", Description, false, Convar_File);
-                                            comboBox.Foreground = Brushes.White;
-
-                                        }
-                                    }
-
-                                }
-                                if (type == "ONE_SELECT")
-                                {
-                                    if (comboBox.SelectedIndex != -1)
-                                    {
-
-                                        Write_convar_To_File(name, comboBox.SelectedValue.ToString(), Description, false, Convar_File);
-                                        comboBox.Foreground = Brushes.White;
-                                    }
-
-
-                                }
-
-
-
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-
-                Write_To_Log(ex.StackTrace);
-                Send_Error_Notif("Fatal Error Occured, Please Check Logs!");
-
-
-            }
-        }
-        
-        private void ValidationTextBox(object sender, TextCompositionEventArgs e)
-        {
-            try
-            {
-                var Var = ((TextBox)sender).Tag.ToString();
-                string[] Split = Var.Split("|");
-                string type = Split[0];
-                Regex regex = new Regex("[^0-9]+");
-
-                switch (type)
-                {
-
-                    case "STRING":
-                        // Send_Success_Notif("Found type String!");
-                        break;
-                    case "PORT":
-                        e.Handled = regex.IsMatch(e.Text);
-
-
-                        break;
-                    case "INT":
-                        e.Handled = regex.IsMatch(e.Text);
-                        break;
-                    case "FLOAT":
-                        Regex Floaty = new Regex(@"^[-+]?[0-9]*\.?[0-9]+$ or ^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$");
-                        e.Handled = Floaty.IsMatch(e.Text);
-                        break;
-                }
-            }
-            catch (Exception ex)
-            {
-
-                Write_To_Log(ex.StackTrace);
-                Send_Fatal_Notif("Fatal Error Occured, Please Check Logs!");
-
-
-            }
-        }
-        public  bool IsPort(string value)
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(value))
-                    return false;
-
-                Regex numeric = new Regex(@"^[0-9]+$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-
-                if (numeric.IsMatch(value))
-                {
-                    try
-                    {
-                        if (Convert.ToInt32(value) < 65535)
-                            return true;
-                    }
-                    catch (OverflowException)
-                    {
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-
-                Write_To_Log(ex.StackTrace);
-                Send_Fatal_Notif("Fatal Error Occured, Please Check Logs!");
-
-
-            }
-            return false;
-
-        }
-        void validate(object sender, RoutedEventArgs e) {
-
-
-            
-
-
-        }
-        public  IEnumerable<string> GetFile(string directory,string Search)
-        {
-            List<string> files = new List<string>();
-
-            try
-            {
-                files.AddRange(Directory.GetFiles(directory, Search, SearchOption.AllDirectories));
-            }
-            catch (Exception ex)
-            {
-               Send_Warning_Notif(ex.Message);
-                Write_To_Log(ex.StackTrace);
-
-            }
-
-            return files;
-        }
-        void Write_convar_To_File(string Convar_Name,string Convar_Value,string Description,bool add_quotation = false, string File_Root = null)
-        {
-            try
-            {
-
-                // string val = Convar_Name.Trim(new Char[] { '-', '+' });
-
-
-                Convar_Value = Convar_Value.Trim();
-                string RootFolder = "";
-                if (File_Root != null)
-                {
-                    if (File.Exists(File_Root))
-                    {
-                        RootFolder  = File_Root;
-                    }
-                    else
-                    {
-                        Send_Warning_Notif("Could Not find Set path!, routing to defualt search.");
-                        RootFolder  = GetFile(Current_Install_Folder, "autoexec_ns_server.cfg").First();
-
-                    }
-                }
-                else
-                {
-
-
-                    RootFolder  = GetFile(Current_Install_Folder, "autoexec_ns_server.cfg").First();
-                }
-                string[] intake = File.ReadAllLines(RootFolder);
-
-                string[] intermid = intake;
-
-               
-                
-                if (Array.Exists(intermid, element => element.StartsWith(Convar_Name)))
-                {
-
-
-                    int index_of_var = Array.FindIndex(intermid, element => element.StartsWith(Convar_Name));
-                    if (add_quotation == true)
-                    {
-                        var desc = intermid[index_of_var];
-                        desc = desc.Substring(desc.LastIndexOf('/') + 1);
-                        if(desc != null && desc != "")
-                        {
-                            intermid[index_of_var] = Convar_Name + " " + '\u0022'+Convar_Value+ '\u0022' +" " +"//" +desc;
-
-
-                        }
-                        else
-                        {
-
-                            intermid[index_of_var] = Convar_Name + " " + '\u0022'+Convar_Value+ '\u0022' +" " +"//" +desc;
-
-                        }
-
-                    }
-                    else
-                    {
-                       
-                        var desc = intermid[index_of_var];
-                        desc = desc.Substring(desc.LastIndexOf('/') + 1);
-                        intermid[index_of_var] = Convar_Name + " "+Convar_Value+" " +"//" +desc;
-                        if (desc != null && desc != "")
-                        {
-                            intermid[index_of_var] = Convar_Name + " "+Convar_Value+" " +"//" +desc;
-
-
-                        }
-                        else
-                        {
-
-                            intermid[index_of_var] = Convar_Name + " "+Convar_Value+" " +"//" +Description;
-
-                        }
-                    }
-                    if (Convar_Value == "REMOVE")
-                    {
-                        intermid =intermid.Where((source, index) => index != index_of_var).ToArray();
-
-                    }
-
-
-                    String x = String.Join("\r\n", intermid.ToArray());
-                    //Send_Warning_Notif(x);
-                    // x = x.Replace("\r\n", "\n").Replace("\r", "\n").Replace("\n", "\r\n");
-                    //ClearFile(Convar_File);
-                 using (StreamWriter sw = new StreamWriter(Convar_File, false, Encoding.UTF8, 65536))
-                {
-                      
-                     sw.WriteLine(x);
-                   }
-                    Send_Success_Notif("The Varible ["+ Convar_Name+"] Has been Found in the File.The value is now ["+ Convar_Value+"]");
-
-
-                }
-                else
-                {
-                   
-
-                    string[] intake_ = File.ReadAllLines(Convar_File);
-
-                    string[] intermid_ = intake_;
-                   
-                    intermid_ = AddElementToArray(intermid_, Convar_Name + " "+Convar_Value+" " +"//" +Description);
-
-                    String x = String.Join("\r\n", intermid_.ToArray());
-
-                    using (StreamWriter sw = new StreamWriter(Convar_File, false, Encoding.UTF8, 65536))
-                    {
-                        sw.WriteLine(x);
-                    }
-                    Send_Success_Notif("The Varible ["+ Convar_Name+"] Has Not been Found in the File.The value Has Been Added and is now ["+ Convar_Value+"]");
-
-                }
-            }
-            catch (Exception ex)
-            {
-                Send_Fatal_Notif("\nIssue with using Server Setup sys, Please Check Logs!");
-                Write_To_Log(ex.Message);
-
-
-            }
-        }
-        private T[] AddElementToArray<T>(T[] array, T element)
-        {
-            
-            T[] newArray = new T[array.Length + 1];
-            int i;
-            for (i = 0; i < array.Length; i++)
-            {
-                newArray[i] = array[i];
-            }
-            newArray[i] = element;
-            return newArray;
-        }
-        private void ClearFile(string path)
-        {
-            if (!File.Exists(path))
-                File.Create(path);
-
-            StreamWriter tw = new StreamWriter(path, false);
-            tw.Flush();
-
-            tw.Close();
-        }
-        string Read_Convar_args(string Convar_Name, string File_Root = null)
-        {
-            try
-            {
-                var pattern = @"(?=[+-])";
-
-                string RootFolder = "";
-                if (File_Root != null)
-                {
-                    if (File.Exists(File_Root))
-                    {
-                        RootFolder  = File_Root;
-                    }
-                    else
-                    {
-                        Send_Warning_Notif("Could Not find Set path!, routing to defualt search.");
-                        RootFolder  = GetFile(Current_Install_Folder, "autoexec_ns_server.cfg").First();
-
-                    }
-
-                }
-                else
-                {
-
-
-                    RootFolder  = GetFile(Current_Install_Folder, "autoexec_ns_server.cfg").First();
-                }
-                string[] intake = File.ReadAllLines(RootFolder);
-                string[] intermid = null;
-
-
-                 for (int i = 0; i<intake.Length; i++)
-                {
-                   Console.WriteLine(String.Format(" array[{0}] = {1}", i, intake[i]));
-                 }
-                Console.WriteLine("\n\n\n");
-             //   Send_Warning_Notif(intake[Array.FindIndex(intake, element => element.Contains(Convar_Name))].ToString());
-
-                if (Array.Exists(intake, element => element.StartsWith(Convar_Name)))
-                {
-
-
-                    int index_of_var = Array.FindIndex(intake, element => element.StartsWith(Convar_Name));
-
-                    return intake[index_of_var].ToString();
-
-
-                }
-                else
-                {
-                  //  Send_Error_Notif("CONVAR NOT FOUND-"+ Convar_Name);
-
-                    return null;
-                }
-            }
-            catch (Exception ex)
-            {
-                Send_Fatal_Notif("\nIssue with using Server Setup sys, Please Check Logs!");
-                Write_To_Log(ex.Message);
-
-
-            }
-            return null;
-        }
-        string Read_Startup_args(string Convar_Name, string File_Root = null)
-        {
-            try
-            {
-                var pattern = @"(?=[+-])";
-
-                string RootFolder = "";
-                if (File_Root != null)
-                {
-                    if (File.Exists(File_Root))
-                    {
-                        RootFolder  = File_Root;
-                    }
-                    else
-                    {
-                        Send_Warning_Notif("Could Not find Set path!, routing to defualt search.");
-                        RootFolder  = GetFile(Current_Install_Folder, "ns_startup_args_dedi.txt").First();
-
-                    }
-                }
-                else
-                {
-
-
-                    RootFolder  = GetFile(Current_Install_Folder, "ns_startup_args_dedi.txt").First();
-                }
-                string[] intake = File.ReadAllLines(Ns_dedi_File);
-
-                string[] intermid = null;
-
-                foreach (string line in intake)
-                {
-                    intermid = Regex.Split(line.Trim(' '), pattern);
-
-                }
-
-                if (Array.Exists(intermid, element => element.StartsWith(Convar_Name))) { 
-                  
-                    
-                    int index_of_var = Array.FindIndex(intermid, element => element.StartsWith(Convar_Name));
-                    return intermid[index_of_var].ToString();
-
-
-                }
-                else
-                {
-                   // Send_Error_Notif("Did Not Find-"+ Convar_Name);
-
-                    return null;
-                }
-            }
-            catch (Exception ex)
-            {
-                Send_Fatal_Notif("\nIssue with using Server Setup sys, Please Check Logs!");
-                Write_To_Log(ex.Message);
-
-
-            }
-            return null;
-        }
-      
-        void Write_Startup_Arg_To_File(string Convar_Name, string Convar_Value, bool add_quotation = false,bool Kill_If_empty = false, string File_Root = null )
-        {
-
-            try
-            {
-
-                string val = Convar_Name.Trim(new Char[] { '-', '+' });
-                var pattern = @"(?=[+-])";
-                Convar_Value = Convar_Value.Trim();
-                string RootFolder = "";
-                if (File_Root != null)
-                {
-                    if (File.Exists(File_Root))
-                    {
-                        RootFolder  = File_Root;
-                    }
-                    else
-                    {
-                        Send_Warning_Notif("Could Not find Set path!, routing to defualt search.");
-                        RootFolder  = GetFile(Current_Install_Folder, "ns_startup_args_dedi.txt").First();
-
-                    }
-                }
-                else
-                {
-
-
-                    RootFolder  = GetFile(Current_Install_Folder, "ns_startup_args_dedi.txt").First();
-                }
-                string[] intake = File.ReadAllLines(RootFolder);
-
-                string[] intermid = null;
-
-                foreach (string line in intake)
-                {
-                    intermid = Regex.Split(line.Trim(' '), pattern);
-                    
-
-                }
-                for (int j = 0; j<intermid.Length; j++)
-                {
-                    Console.WriteLine("array[{0}] = {1}", j, intermid[j]);
-
-                }
-                if (Array.Exists(intermid, element => element.StartsWith(Convar_Name)))
-                {
-
-                   
-                    int index_of_var = Array.FindIndex(intermid, element => element.StartsWith(Convar_Name));
-                    if(add_quotation == true)
-                    {
-                        intermid[index_of_var] = Convar_Name + " " + '\u0022'+Convar_Value+ '\u0022';
-
-
-                    }
-                    else
-                    {
-                        intermid[index_of_var] = Convar_Name + " " +Convar_Value;
-
-                    }
-
-                    if (Kill_If_empty == true)
-                    {
-                        if (Convar_Value == "" || Convar_Value == null)
-                        {
-                            intermid =intermid.Where((source, index) => index != index_of_var).ToArray();
-                        }
-
-                    }
-
-                    String x = String.Join(" ", intermid.ToArray());
-                  //  ClearFile(RootFolder +@"\" + "ns_startup_args_dedi.txt");
-
-                    using (StreamWriter sw = new StreamWriter(RootFolder +@"\" + "ns_startup_args_dedi.txt", false, Encoding.UTF8, 65536))
-                    {
-                        sw.WriteLine(Regex.Replace(x, @"\s+", " ").Replace("+ ","+"));
-                    }
-                  //  Send_Success_Notif("The Varible "+ Convar_Name+" Has been Found in the File.The value is now "+ Convar_Value);
-
-                    
-                }
-                else 
-                {
-
-                    string[] intake_ = File.ReadAllLines(Ns_dedi_File);
-
-                    string[] intermid_ = null;
-                    foreach (string line in intake_)
-                    {
-                        //  intermid_ = line.Split('+');
-                        intermid_ = Regex.Split(line, pattern);
-
-                    }
-                    
-                    intermid_ = AddElementToArray(intermid_, Convar_Name +" "+ Convar_Value);
-                    
-                  
-                    String x = String.Join(" ", intermid_.ToArray());
-                    //x.Replace(System.Environment.NewLine, "replacement text");
-                    //  File.WriteAllText(RootFolder, String.Empty);
-                    ClearFile(RootFolder +@"\" + "ns_startup_args_dedi.txt");
-                    using (StreamWriter sw = new StreamWriter(RootFolder +@"\" + "ns_startup_args_dedi.txt", false, Encoding.UTF8, 65536))
-                    {
-                        sw.WriteLine(Regex.Replace(x, @"\s+", " "));
-                    }
-                    // File.WriteAllText(GetFile(RootFolder, "ns_startup_args_dedi.txt").First(), x);
-                    Send_Warning_Notif("The Varible ["+ Convar_Name+"] Was not Found in File. It Has Been Added Now with the value of [" + Convar_Value+"]");
-
-                }
-            }
-            catch(Exception ex)
-            {
-                Send_Fatal_Notif("\nIssue with using Server Setup sys, Please Check Logs!");
-                Write_To_Log(ex.Message);
-
-
-            }
-
-        }
-       
-    int cntr = 0;
-        void Clear_Box(object sender, KeyEventArgs e)
-        {
-            cntr++;
-           
-
-            
-            TextBox Text_Box = (TextBox)sender;
-            if (cntr < 2)
-            {
-                string Reg2;
-                Reg2= Text_Box.Text;
-                if (Text_Box.Text == Reg2)
-                {
-                    Text_Box.Text = "";
-
-
-                }
-
-            }
-            
-        }
-                void Save_On_Focus_(object sender, KeyEventArgs e)
-        {
-
-            try
-            {
-                if (sender.GetType() == typeof(TextBox))
-                {
-
-
-
-
-
-                    var val = ((TextBox)sender).Text.ToString();
-                    var Tag = ((TextBox)sender).Tag.ToString();
-                    var Description = ((TextBox)sender).ToolTip.ToString();
-
-                    TextBox Text_Box = (TextBox)sender;
-                    string[] Split = Tag.Split("|");
-                    string type = Split[0];
-                    string name = Split[1];
-                    string ARG = Split[2];
-
-
-                    if (val != null)
-                    {
-
-                        switch (type)
-                        {
-
-                            case "STRING":
-                                if (e.Key == Key.Return)
-                                {
-                                    if (ARG!= null && ARG!= "" && ARG== "CONVAR")
-                                    {
-                                        Write_convar_To_File(name, val, Description, true, Convar_File);
-                                        GC.Collect();
-                                        Text_Box.Foreground = Brushes.White;
-
-                                    }
-                                    else { 
-                                    Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
-
-                                        Write_Startup_Arg_To_File(name, val, false, true,Ns_dedi_File);
-
-                                        Mouse.OverrideCursor = System.Windows.Input.Cursors.Arrow;
-                                        Text_Box.Foreground = Brushes.White;
-
-
-                                    }
-
-
-
-                                }
-                                break;
-                            case "STRINGQ":
-                                if (e.Key == Key.Return)
-                                {
-                                    if (ARG!= null && ARG!= "" && ARG== "CONVAR")
-                                    {
-                                        Write_convar_To_File(name, val, Description, true, Convar_File);
-                                        Text_Box.Foreground = Brushes.White;
-
-                                        GC.Collect();
-
-                                    }
-                                    else { 
-                                        Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
-
-                                        Write_Startup_Arg_To_File(name, val, false, true, Ns_dedi_File);
-                                        Mouse.OverrideCursor = System.Windows.Input.Cursors.Arrow;
-                                        Text_Box.Foreground = Brushes.White;
-
-
-
-                                    }
-
-
-
-                                }
-                                break;
-                            case "INT":
-                                if (e.Key == Key.Return)
-                                {
-                                    if (ARG!= null && ARG!= "" && ARG== "CONVAR")
-                                    {
-                                        Write_convar_To_File(name, val, Description, false, Convar_File);
-                                        Text_Box.Foreground = Brushes.White;
-
-                                    }
-                                    else
-                                    {
-                                        Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
-
-                                        Write_Startup_Arg_To_File(name, val, false, true, Ns_dedi_File);
-                                        Mouse.OverrideCursor = System.Windows.Input.Cursors.Arrow;
-                                        Text_Box.Foreground = Brushes.White;
-
-
-
-                                    }
-
-
-
-                                }
-                                break;
-                            case "FLOAT":
-                                if (e.Key == Key.Return)
-                                {
-                                    if (ARG!= null && ARG!= "" && ARG== "CONVAR")
-                                    {
-                                        Write_convar_To_File(name, val, Description, false, Convar_File);
-                                        Text_Box.Foreground = Brushes.White;
-
-                                    }
-                                    else
-                                    {
-                                        Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
-
-                                        Write_Startup_Arg_To_File(name, val, true, true,Ns_dedi_File);
-                                        Mouse.OverrideCursor = System.Windows.Input.Cursors.Arrow;
-                                        GC.Collect();
-                                        Text_Box.Foreground = Brushes.White;
-
-
-                                    }
-
-
-
-                                }
-                                break;
-                            case "PORT":
-
-                                if (val.Count() >5)
-                                {
-                                    Send_Warning_Notif("Port is larger Than Required");
-                                    Text_Box.Background = Brushes.Red;
-                                }
-                                else
-                                {
-                                    Text_Box.Background = (SolidColorBrush)new BrushConverter().ConvertFrom("#FF4C4C4C");
-
-                                    if (e.Key == Key.Return)
-                                    {
-
-                                        if (IsPort(val) == true && val.Count() <6)
-                                        {
-                                            Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
-
-                                            Write_Startup_Arg_To_File(name, val, false, true, Ns_dedi_File);
-                                            Text_Box.Foreground = Brushes.White;
-
-                                            Mouse.OverrideCursor = System.Windows.Input.Cursors.Arrow;
-
-                                            Text_Box.Background = (SolidColorBrush)new BrushConverter().ConvertFrom("#FF4C4C4C");
-
-
-                                        }
-                                        else
-                                        {
-                                            if(val == null || val == "")
-                                            {
-
-                                                Send_Warning_Notif("An Empty Value At ["+name+"], Has been removed");
-                                                Write_Startup_Arg_To_File(name, val, false, true, Ns_dedi_File);
-
-                                            }
-                                            else
-                                            {
-                                                Send_Warning_Notif("Error At ["+name+"]");
-                                                Text_Box.Background = Brushes.Red;
-                                                Text_Box.Text = null;
-
-                                            }
-
-                                        }
-                                    }
-                                }
-                                break;
-
-                        }
-
-
-
-
-
-                    }
-                }
-                
-            }
-            catch (Exception ex)
-            {
-                Send_Fatal_Notif("\nIssue with writing Input, Please Check Logs");
-                Write_To_Log(ex.Message);
-
-            }
-        }
-        
-        private void Button_Click_2(object sender, RoutedEventArgs e)
-        {
-
-
-        }
-       public class Arg_Set
-        {
-            public string Name { get; set; }
-            public string Type { get; set; }
-            public string Default { get; set; }
-            public string Tag { get; set; }
-            public string regex { get; set; }
-            public string ARG { get; set; }
-
-            public string Description { get; set; }
-            public string[] List { get; set; }
-
-        }
-        bool Verify_List( List<string> Good_Words,string Input)
-        {
-           return Good_Words.Contains(Input);
-
-        }
-        private ArrayList Load_Args()
-        {
-
-              ArrayList Arg_List = new ArrayList();
-
-            using (StreamReader r = new StreamReader(@"D:\Development Northstar AmVCX C++ branch 19023 ID 44\VTOL\Resources\Test_Args_1.json"))
-            {
-                string json = r.ReadToEnd();
-               // Send_Success_Notif(json);
-               Server_Json = Server_Setup.FromJson(json);
-}
-
-            foreach (var items in Server_Json.Startup_Arguments)
-            {
-                if (items.Type == "GAME_MODE")
-                {
-                    foreach (var item in items.List)
-                    {
-
-                        Game_Modes_List.Add(item);
-                    }
-
-                }
-
-                Arg_List.Add( new Arg_Set
-                {
-                    Name = items.Name,
-                    Type = items.Type,
-                    Default = items.Default,
-                    Description = items.Description_Tooltip,
-                    List = items.List,
-                    Tag = items.Type+"|"+items.Name+"|"+items.ARG,
-
-
-
-                } );
-                DataContext = this;
-
-            }
-
-
-return Arg_List;
-
-}
-
-        private ArrayList Convar_Args()
-        {
-
-            ArrayList Arg_List = new ArrayList();
-
-            using (StreamReader r = new StreamReader(@"D:\Development Northstar AmVCX C++ branch 19023 ID 44\VTOL\Resources\Test_Args_1.json"))
-            {
-                string json = r.ReadToEnd();
-                // Send_Success_Notif(json);
-                Server_Json = Server_Setup.FromJson(json);
-            }
-
-            foreach (var items in Server_Json.Convar_Arguments)
-            {
-                if (items.Type == "GAME_MODE")
-                {
-                    foreach (var item in items.List)
-                    {
-
-                        Game_Modes_List.Add(item);
-                    }
-
-                }
-
-                Arg_List.Add(new Arg_Set
-                {
-                    Name = items.Name,
-                    Type = items.Type,
-                    Default = items.Default,
-                    Description = items.Description_Tooltip,
-                    List = items.List,
-                    Tag = items.Type+"|"+items.Name+"|"+items.ARG,
-                    
-
-
-                });
-                DataContext = this;
-
-            }
-            return Arg_List;
-
-        }
-
-        private void Dsiabled_ListBox_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            Send_Error_Notif("right click");
-
-        }
-
-        private void Mod_Panel_Drop(object sender, DragEventArgs e)
-        {
-
-            if (e.Data.GetDataPresent(DataFormats.FileDrop))
-            {
-                // Note that you can have more than one file.
-                string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
-
-                // Assuming you have one file that you care about, pass it off 
-                try
-                {
-
-                    foreach (string file in files)
-                    {
-                        string path = file;
-                        if (path == null || !File.Exists(file))
-                        {
-                           
-                            Send_Error_Notif("\nInvalid Mod Zip Location chosen");
-
-
-                        }
-                        else
-                        {
-                            string FolderName = path.Split(Path.DirectorySeparatorChar).Last();
-                            Browse_For_MOD.Text = path;
-                            Console.WriteLine(path);
-                            Console.WriteLine("The Folder Name is-" + FolderName + "\n\n");
-                            Send_Success_Notif("Recieved - " + file);
-
-                           Unpack_To_Location_Custom(path, Current_Install_Folder + @"\R2Northstar\mods");
-                            Call_Mods_From_Folder();
-
-                            ApplyDataBinding();
-                        }
-                    }
-                    
-                }
-                catch (Exception ex)
-                {
-                    Drag_Drop_Overlay_Skins.Visibility = Visibility.Hidden;
-
-                    Send_Error_Notif("\nIssue with File path, please Rebrowse.");
-                    Write_To_Log(ex.Message);
-                }
-            }
-            Drag_Drop_Overlay.Visibility = Visibility.Hidden;
-
-        }
-
-        private void Mod_Panel_DragOver(object sender, DragEventArgs e)
-        {
-
-        }
-
-        private void Mod_Panel_DragLeave(object sender, DragEventArgs e)
-        {
-            Drag_Drop_Overlay.Visibility = Visibility.Hidden;
-
-        }
-
-        private void Mod_Panel_DragEnter(object sender, DragEventArgs e)
-        {
-            Drag_Drop_Overlay.Visibility = Visibility.Visible;
-        }
-
-        private void skins_Panel_Drop(object sender, DragEventArgs e)
-        {
-
-            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-            if (Directory.Exists(Current_Install_Folder + @"\Skins_Unpack_Mod_MNGR"))
-            {
-                try
-                {
-                    BitmapImage bitmap = new BitmapImage();
-                    bitmap.BeginInit();
-                    bitmap.UriSource = new Uri(@"pack://application:,,,/Resources/NO_TEXTURE.png");
-                    bitmap.EndInit();
-                    Diffuse_IMG.Source = bitmap;
-
-
-                    Glow_IMG.Source = bitmap;
-
-                    Directory.Delete(Current_Install_Folder + @"\Skins_Unpack_Mod_MNGR", true);
-                    GC.Collect();
-                }
-                catch (Exception ef)
-                {
-                    Send_Fatal_Notif("Fatal Error Occured, Please Check Logs!");
-
-                    Write_To_Log(ef.StackTrace.ToString());
-                }
-
-
-
-
-            }
-            if (Directory.Exists(Current_Install_Folder + @"\Thumbnails"))
-            {
-                try
-                {
-                    BitmapImage bitmap = new BitmapImage();
-                    bitmap.BeginInit();
-                    bitmap.UriSource = new Uri(@"pack://application:,,,/Resources/NO_TEXTURE.png");
-                    bitmap.EndInit();
-                    Diffuse_IMG.Source = bitmap;
-
-
-                    Glow_IMG.Source = bitmap;
-
-                    Directory.Delete(Current_Install_Folder + @"\Thumbnails", true);
-                    GC.Collect();
-                }
-                catch (Exception ef)
-                {
-                    Send_Fatal_Notif("Fatal Error Occured, Please Check Logs!");
-
-                    Write_To_Log(ef.ToString());
-                }
-
-            }
-            try
-            {
-                if (e.Data.GetDataPresent(DataFormats.FileDrop))
-                {
-
-                    // Note that you can have more than one file.
-                    string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
-
-                    
-                        Skin_Temp_Loc = files[0];
-                        if (Skin_Temp_Loc == null || !File.Exists(Skin_Temp_Loc))
-                        {
-
-                            Send_Error_Notif("\nInvalid Mod Zip Location chosen");
-                            return;
-
-                        }
-                        else
-                        {
-                            Skin_Path_Box.Text = Skin_Temp_Loc;
-                            // Send_Success_Notif("\nSkin Found!");
-                            if (ZipHasFile(".dds", Skin_Temp_Loc))
-                            {
-                                Send_Success_Notif("Compatible Skin Detected");
-                                Compat_Indicator.Fill = Brushes.Green;
-                                Install_Skin_Bttn.IsEnabled = true;
-                                //   var directory = new DirectoryInfo(root);
-                                // var myFile = (from f in directory.GetFiles()orderby f.LastWriteTime descending select f).First();
-                                if (Directory.Exists(Current_Install_Folder + @"\Skins_Unpack_Mod_MNGR"))
-                                {
-                                    Skin_Path = Current_Install_Folder + @"\Skins_Unpack_Mod_MNGR";
-                                    ZipFile.ExtractToDirectory(Skin_Temp_Loc, Skin_Path, Encoding.GetEncoding("GBK"), true);
-
-                                }
-                                else
-                                {
-
-                                    Directory.CreateDirectory(Current_Install_Folder + @"\Skins_Unpack_Mod_MNGR");
-                                    Skin_Path = Current_Install_Folder + @"\Skins_Unpack_Mod_MNGR";
-
-                                    ZipFile.ExtractToDirectory(Skin_Temp_Loc, Skin_Path, Encoding.GetEncoding("GBK"));
-
-                                }
-                            }
-                            else
-                            {
-                                Send_Error_Notif("Incompatible Skin Detected");
-                                Compat_Indicator.Fill = Brushes.Red;
-                                Install_Skin_Bttn.IsEnabled = false;
-
-                            }
-
-
-                            Console.WriteLine(Skin_Temp_Loc);
-                            String Thumbnail = Current_Install_Folder + @"\Thumbnails\";
-                            if (Directory.Exists(Thumbnail))
-                            {
-                                //DirectoryInfo dir = new DirectoryInfo(Thumbnail);
-                                var Serached = SearchAccessibleFiles(Skin_Path, "col");
-                                var firstOrDefault_Col = Serached.FirstOrDefault();
-                                if (!Serached.Any())
-                                {
-                                    throw new InvalidOperationException();
-                                }
-                                else
-                                {
-                                    if (File.Exists(firstOrDefault_Col))
-                                    {
-                                        String col = Thumbnail + Path.GetFileName(firstOrDefault_Col) + ".png";
-                                        Console.WriteLine(firstOrDefault_Col);
-                                        if (File.Exists(col))
-                                        {
-
-                                            DDSImage img_1 = new DDSImage(firstOrDefault_Col);
-                                            img_1.Save(Thumbnail + Path.GetFileName(firstOrDefault_Col) + ".png");
-                                            BitmapImage bitmap = new BitmapImage();
-                                            bitmap.BeginInit();
-                                            bitmap.UriSource = new Uri(col);
-                                            bitmap.EndInit();
-                                            Diffuse_IMG.Source = bitmap;
-                                        }
-                                        else
-                                        {
-                                            Console.WriteLine(col);
-                                            DDSImage img_1 = new DDSImage(firstOrDefault_Col);
-
-                                            img_1.Save(col);
-
-                                            BitmapImage bitmap = new BitmapImage();
-                                            bitmap.BeginInit();
-                                            bitmap.UriSource = new Uri(col);
-                                            bitmap.EndInit();
-                                            Diffuse_IMG.Source = bitmap;
-
-                                        }
-
-                                    }
-                                    else
-                                    {
-                                        BitmapImage bitmap = new BitmapImage();
-                                        bitmap.BeginInit();
-                                        bitmap.UriSource = new Uri(@"pack://application:,,,/Resources/NO_TEXTURE.png");
-                                        bitmap.EndInit();
-                                        Diffuse_IMG.Source = bitmap;
-
-                                    }
-
-
-                                }
-
-                                var Serached_ = SearchAccessibleFiles(Skin_Path, "ilm");
-                                var firstOrDefault_ilm = Serached_.FirstOrDefault();
-                                if (!Serached.Any())
-                                {
-                                    throw new InvalidOperationException();
-                                }
-                                else
-                                {
-                                    if (File.Exists(firstOrDefault_ilm))
-                                    {
-                                        if (File.Exists(firstOrDefault_ilm + ".png"))
-                                        {
-
-                                            Console.WriteLine(firstOrDefault_ilm);
-                                            // Image Image_2 = new Bitmap(Thumbnail+Path.GetFileName(firstOrDefault_ilm)+".png");
-                                            BitmapImage bitmap = new BitmapImage();
-                                            bitmap.BeginInit();
-                                            bitmap.UriSource = new Uri(Thumbnail + Path.GetFileName(firstOrDefault_ilm) + ".png");
-                                            bitmap.EndInit();
-                                            Glow_IMG.Source = bitmap;
-                                        }
-                                        else
-                                        {
-
-                                            DDSImage img_2 = new DDSImage(firstOrDefault_ilm);
-                                            img_2.Save(Thumbnail + Path.GetFileName(firstOrDefault_ilm) + ".png");
-
-                                            //Image Image_2 = new Bitmap(Thumbnail+Path.GetFileName(firstOrDefault_ilm)+".png");
-                                            BitmapImage bitmap = new BitmapImage();
-                                            bitmap.BeginInit();
-                                            bitmap.UriSource = new Uri(Thumbnail + Path.GetFileName(firstOrDefault_ilm) + ".png");
-                                            bitmap.EndInit();
-                                            Glow_IMG.Source = bitmap;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        // Image Image_1 = new Bitmap(Directory.GetCurrentDirectory()+@"\No_Texture.jpg");
-                                        BitmapImage bitmap = new BitmapImage();
-                                        bitmap.BeginInit();
-                                        bitmap.UriSource = new Uri(@"pack://application:,,,/Resources/NO_TEXTURE.png");
-                                        bitmap.EndInit();
-                                        Glow_IMG.Source = bitmap;
-                                    }
-
-                                }
-
-
-
-
-                            }
-
-                            else
-                            {
-
-                                Directory.CreateDirectory(Thumbnail);
-
-                                //DirectoryInfo dir = new DirectoryInfo(Thumbnail);
-                                var Serached = SearchAccessibleFiles(Skin_Path, "col");
-                                var firstOrDefault_Col = Serached.FirstOrDefault();
-                                if (!Serached.Any())
-                                {
-                                    throw new InvalidOperationException();
-                                }
-                                else
-                                {
-                                    if (File.Exists(firstOrDefault_Col))
-                                    {
-                                        Console.WriteLine(firstOrDefault_Col);
-                                        if (File.Exists(firstOrDefault_Col + ".png"))
-                                        {
-
-                                            //   Image Image_1 = new Bitmap(Thumbnail+Path.GetFileName(firstOrDefault_Col)+".png");
-                                            BitmapImage bitmap = new BitmapImage();
-                                            bitmap.BeginInit();
-                                            bitmap.UriSource = new Uri(Thumbnail + Path.GetFileName(firstOrDefault_Col) + ".png");
-                                            bitmap.EndInit();
-                                            Diffuse_IMG.Source = bitmap;
-                                        }
-                                        else
-                                        {
-                                            DDSImage img_1 = new DDSImage(firstOrDefault_Col);
-                                            img_1.Save(Thumbnail+Path.GetFileName(firstOrDefault_Col)+".png");
-                                            // Image Image_1 = new Bitmap(Thumbnail+Path.GetFileName(firstOrDefault_Col)+".png");
-                                            BitmapImage bitmap = new BitmapImage();
-                                            bitmap.BeginInit();
-                                            bitmap.UriSource = new Uri(Thumbnail + Path.GetFileName(firstOrDefault_Col) + ".png");
-                                            bitmap.EndInit();
-                                            Diffuse_IMG.Source = bitmap;
-
-                                        }
-
-                                    }
-                                    else
-                                    {
-                                        // Image Image_1 = new Bitmap(Directory.GetCurrentDirectory()+@"\No_Texture.jpg");
-                                        BitmapImage bitmap = new BitmapImage();
-                                        bitmap.BeginInit();
-                                        bitmap.UriSource = new Uri(@"pack://application:,,,/Resources/NO_TEXTURE.png");
-                                        bitmap.EndInit();
-                                        Diffuse_IMG.Source = bitmap;
-
-                                    }
-
-
-                                }
-
-                                var Serached_ = SearchAccessibleFiles(Skin_Path, "ilm");
-                                var firstOrDefault_ilm = Serached_.FirstOrDefault();
-                                if (!Serached.Any())
-                                {
-                                    throw new InvalidOperationException();
-                                }
-                                else
-                                {
-                                    if (File.Exists(firstOrDefault_ilm))
-                                    {
-                                        if (File.Exists(firstOrDefault_ilm + ".png"))
-                                        {
-
-                                            Console.WriteLine(firstOrDefault_ilm);
-                                            //    Image Image_2 = new Bitmap(Thumbnail+Path.GetFileName(firstOrDefault_ilm)+".png");
-                                            BitmapImage bitmap = new BitmapImage();
-                                            bitmap.BeginInit();
-                                            bitmap.UriSource = new Uri(Thumbnail + Path.GetFileName(firstOrDefault_ilm) + ".png");
-                                            bitmap.EndInit();
-                                            Glow_IMG.Source = bitmap;
-                                        }
-                                        else
-                                        {
-
-                                            DDSImage img_2 = new DDSImage(firstOrDefault_ilm);
-                                            img_2.Save(Thumbnail+Path.GetFileName(firstOrDefault_ilm)+".png");
-                                            // Image Image_2 = new Bitmap(Thumbnail+Path.GetFileName(firstOrDefault_ilm)+".png");
-                                            BitmapImage bitmap = new BitmapImage();
-                                            bitmap.BeginInit();
-                                            bitmap.UriSource = new Uri(Thumbnail + Path.GetFileName(firstOrDefault_ilm) + ".png");
-                                            bitmap.EndInit();
-                                            Glow_IMG.Source = bitmap;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        //  Image Image_1 = new Bitmap(Directory.GetCurrentDirectory()+@"\No_Texture.jpg");
-                                        BitmapImage bitmap = new BitmapImage();
-                                        bitmap.BeginInit();
-                                        bitmap.UriSource = new Uri(@"pack://application:,,,/Resources/NO_TEXTURE.png");
-                                        bitmap.EndInit();
-                                        Glow_IMG.Source = bitmap;
-
-                                    }
-
-                                }
-
-
-
-
-
-                            }
-                           
-
-                            //   Import_Skin_Bttn.Enabled=false;
-
-                        }
-                    
-
-                    Drag_Drop_Overlay_Skins.Visibility = Visibility.Hidden;
-                }
-            }
-            catch (Exception ex)
-            {
-                BitmapImage bitmap = new BitmapImage();
-                bitmap.BeginInit();
-                bitmap.UriSource = new Uri(@"pack://application:,,,/Resources/NO_TEXTURE.png");
-                bitmap.EndInit();
-                Diffuse_IMG.Source = bitmap;
-
-                Glow_IMG.Source = bitmap;
-                Write_To_Log(ex.StackTrace);
-                Send_Fatal_Notif("Fatal Error Occured, Please Check Logs!");
-                Drag_Drop_Overlay_Skins.Visibility = Visibility.Hidden;
-
-            }
-
-
-
-
-        }
-
-        private void skins_Panel_DragLeave(object sender, DragEventArgs e)
-        {
-            Drag_Drop_Overlay_Skins.Visibility = Visibility.Hidden;
-        }
-
-        private void skins_Panel_DragEnter(object sender, DragEventArgs e)
-        {
-            Drag_Drop_Overlay_Skins.Visibility = Visibility.Visible;
-
-        }
-
-
-        
-
-        
-        private void Help_Button_Click(object sender, RoutedEventArgs e)
-        {
-            string val = @"https://github.com/BigSpice/VTOL/blob/master/README.md";
-
-            Send_Info_Notif("Opening - " + val);
-            System.Diagnostics.Process.Start(new ProcessStartInfo
-            {
-                FileName = val,
-                UseShellExecute = true
-            });
-        }
-
-        
-        private async void CheckComboBox_Initialized(object sender, EventArgs e)
-        {
-            
-                if (sender.GetType() == typeof(HandyControl.Controls.CheckComboBox))
-                {
-                    HandyControl.Controls.CheckComboBox comboBox = (HandyControl.Controls.CheckComboBox)sender;
-                    var Var = ((HandyControl.Controls.CheckComboBox)sender).Tag.ToString();
-
-                    string[] Split = Var.Split("|");
-                    string type = Split[0]; 
-                    string name = Split[1];
-                    string ARG = Split[2];
-                // string list = String.Join(" ", comboBox.SelectedItems.Cast<String>().ToArray());
-                if (ARG == "CONVAR")
-                {
-                    if (type == "LIST")
-                    {
-                        string import = null;
-                        this.Dispatcher.Invoke(() =>
-                        {
-                            import = Read_Convar_args(name, Convar_File);
-                        });
-                        if (import != null)
-                        {
-                            import = import.Replace("\"", "").Replace(name, "");
-                            int index = import.IndexOf("//");
-                            if (index >= 0)
-                                import = import.Substring(0, index);
-                            import = import.Trim();
-                            string[] import_split = import.Split(",");
-                            foreach (string item in import_split)
-                            {
-                                comboBox.SelectedItems.Add(item);
-                            }
-
-                            comboBox.Foreground = Brushes.White;
-
-                        }
-                        else
-                        {
-                            comboBox.Foreground = Brushes.Gray;
-
-                        }
-
-                    }
-                    else
-                    {
-
-
-                        //   Send_Success_Notif("Convar");
-                        //      Read_Convar_args(name, Convar_File);
-                        string import = null;
-                        this.Dispatcher.Invoke(() =>
-                        {
-                            import =  Read_Convar_args(name, Convar_File);
-                        });
-                        if (import != null)
-                        {
-                            import = import.Replace("\"", "").Replace(name, "");
-                            int index = import.IndexOf("//");
-                            if (index >= 0)
-                                import = import.Substring(0, index);
-
-                            string[] import_split = import.Split(" ");
-                            foreach (string item in import_split)
-                            {
-                                comboBox.SelectedItems.Add(item);
-
-
-                                Send_Error_Notif(item);
-                            }
-                                comboBox.Foreground = Brushes.White;
-
-                        }
-                        else
-                        {
-                            comboBox.Foreground = Brushes.Gray;
-
-                        }
-                    }
-                }
-
-
-                else
-                {
-
-                    //Send_Info_Notif(Var);
-
-                    // string list = String.Join(" ", comboBox.SelectedItems.Cast<String>().ToArray());
-                    string import = null;
-                    this.Dispatcher.Invoke(() =>
-                    {
-                        import = Read_Startup_args(name);
-                    });
-                    if (import != null)
-                    {
-                        import.Replace(name.Trim(new Char[] { '-', '+' }), "");
-                        string[] import_split = import.Split(" ");
-                        foreach (string item in import_split)
-                        {
-                            comboBox.SelectedItems.Add(item);
-
-                        }
-
-                        comboBox.Foreground = Brushes.White;
-
-                    }
-                    else
-                    {
-                        comboBox.Foreground = Brushes.Gray;
-
-                    }
-                }
-                }
-            else if (sender.GetType() == typeof(ComboBox))
-            {
-                ComboBox comboBox = (ComboBox)sender;
-                var Var = ((ComboBox)sender).Tag.ToString();
-
-                string[] Split = Var.Split("|");
-                string type = Split[0];
-                string name = Split[1];
-                string ARG = Split[2];
-                if (ARG == "CONVAR")
-                {
-                    if (type == "BOOL")
-                    {
-                        string import = null;
-                        this.Dispatcher.Invoke(() =>
-                        {
-                            import = Read_Convar_args(name, Convar_File);
-                        });
-                        if (import != null)
-                        {
-                            import = import.Replace("\"", "").Replace(name, "");
-                            int index = import.IndexOf("//");
-                            if (index >= 0)
-                                import = import.Substring(0, index);
-                            comboBox.SelectedIndex = Convert.ToInt32(import);
-                            comboBox.Foreground = Brushes.White;
-
-                        }
-                        else
-                        {
-                            comboBox.Foreground = Brushes.Gray;
-
-                        }
-
-                    }
-                    if (type == "ONE_SELECT")
-                    {
-                        string import = null;
-                        this.Dispatcher.Invoke(() =>
-                        {
-                            import = Read_Convar_args(name, Convar_File);
-                        });
-                        if (import != null)
-                        {
-                            import = import.Replace("\"", "").Replace(name, "");
-                            int index = import.IndexOf("//");
-                            if (index >= 0)
-                            {
-                                import = import.Substring(0, index);
-                            }
-                         
-                            comboBox.SelectedValue = import.Trim();
-                            comboBox.Foreground = Brushes.White;
-                        }
-                        else
-                        {
-                            comboBox.Foreground = Brushes.Gray;
-
-                        }
-
-                    }
-                    
-
-                }
-            }
-
-            Started_Selection = false;
-        }
-        
-        private void TextBox_Initialized(object sender, EventArgs e)
-        {
-
-            var val = ((TextBox)sender).Text.ToString();
-            var Tag = ((TextBox)sender).Tag.ToString();
-            TextBox Text_Box = (TextBox)sender;
-            string[] Split = Tag.Split("|");
-            string type = Split[0];
-            string name = Split[1];
-            string ARG = Split[2];
-
-            string import = null;
-            if (ARG == "CONVAR")
-            {
-                this.Dispatcher.Invoke(() =>
-                {
-                    import =  Read_Convar_args(name, Convar_File);
-                    
-                });
-                if (import != null)
-                {
-                    Text_Box.Foreground = Brushes.White;
-
-                    if (type == "STRING")
-                    {
-                       //  import = import.Replace(name.Trim(new Char[] { '-', '+' }), "");
-                        import = import.Replace("\"", "").Replace(name, "");
-                        int index = import.IndexOf("//");
-                        if (index >= 0)
-                            import = import.Substring(0, index);
-
-                        Text_Box.Text = import.Trim();
-                        //  Send_Warning_Notif(import);
-
-
-                    }
-                    else
-                    {
-                        //  import = import.Replace(name.Trim(new Char[] { '-', '+' }), "");
-                        import = import.Replace("\"", "").Replace(name, "");
-                        int index = import.IndexOf("//");
-                        if (index >= 0)
-                            import = import.Substring(0, index);
-
-
-                        Text_Box.Text = import.Trim() ;
-
-
-                    }
-
-
-
-
-
-
-                }
-                else
-                {
-
-                    Text_Box.Foreground = Brushes.Gray;
-                }
-            }
-            else
-            {
-
-
-                this.Dispatcher.Invoke(() =>
-                {
-                    import = Read_Startup_args(name);
-                });
-                if (import != null)
-                {
-                    Text_Box.Foreground = Brushes.White;
-
-                    if (type == "STRINGQ")
-                    {
-                        Send_Info_Notif(import);
-                        //  import = import.Replace(name.Trim(new Char[] { '-', '+' }), "");
-                        import = import.Replace("\"", "").Replace(name, "");
-
-
-
-                        Text_Box.Text = import.Trim();
-                        //  Send_Warning_Notif(import);
-
-
-                    }
-                    else
-                    {
-                        import.Replace(name.Trim(new Char[] { '-', '+' }), "");
-                        string[] import_split = import.Split(" ");
-                        for (int i = 1; i < import_split.Length; i++)
-                        {
-                            Text_Box.Text = import_split[1].Trim();
-                        }
-                    }
-
-
-
-
-
-
-                }
-                else
-                {
-
-                    Text_Box.Foreground = Brushes.Gray;
-                }
-            }
-        }
-
-        private void UI_List_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
-        {
-           
-        }
-
-        private void S(object sender, MouseWheelEventArgs e)
-        {
-            if (e.Delta < 0)
-
-            {
-
-                Scoller.LineDown();
-
-            }
-
-            else
-
-            {
-
-                Scoller.LineUp();
-
-            }
-        }
-
-        private void Convar_Arguments_UI_List_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
-        {
-            if (e.Delta < 0)
-
-            {
-
-                Scoller.LineDown();
-
-            }
-
-            else
-
-            {
-
-                Scoller.LineUp();
-
-            }
-        }
-
-        private void ComboBox_MouseEnter(object sender, MouseEventArgs e)
-        {
-             Started_Selection = true;
-
-        }
-
-       
-
-        private void Load_Bt_(object sender, RoutedEventArgs e)
-        {
-            if (Directory.Exists(Current_Install_Folder))
-            {
-                Convar_File = GetFile(Current_Install_Folder, "autoexec_ns_server.cfg").First();
-                Ns_dedi_File = GetFile(Current_Install_Folder, "ns_startup_args_dedi.txt").First();
-            }
-            if (File.Exists(Ns_dedi_File) && File.Exists(Convar_File)){
-                Startup_Arguments_UI_List.ItemsSource = Load_Args();
-                Convar_Arguments_UI_List.ItemsSource = Convar_Args();
-                Started_Selection = false;
-
-                Load_Bt.Content = "Relead Arguments";
-                Check_Args();
-
-
-            }
-            else
-            {
-                Send_Error_Notif("Please rebrowse for a Correct Location!");
-                return;
-            }
-
-
-
-        }
     }
-    
 }
