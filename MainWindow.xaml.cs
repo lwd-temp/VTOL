@@ -32,6 +32,11 @@ using Utils.Extensions;
 using static VTOL.MainWindow;
 using Microsoft.Xaml.Behaviors;
 using System.Threading;
+using System.Management;
+using System.Runtime.InteropServices;
+using System.Globalization;
+using System.Windows.Threading;
+using ZIPI = Ionic.Zip;
 //****TODO*****//
 
 //Migrate Release Parse to the New Updater Sys
@@ -42,7 +47,15 @@ using System.Threading;
 //**************//
 namespace VTOL
 {
-   
+
+    public static class ExtensionMethods
+    {
+        private static readonly Action EmptyDelegate = delegate { };
+        public static void Refresh(this UIElement uiElement)
+        {
+            uiElement.Dispatcher.Invoke(DispatcherPriority.Render, EmptyDelegate);
+        }
+    }
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
@@ -94,7 +107,6 @@ namespace VTOL
     public partial class MainWindow : Window
     {
        
-
         BitmapImage Vanilla = new BitmapImage(new Uri(@"/Resources/TF2_Vanilla_promo.gif", UriKind.Relative));
         BitmapImage Northstar = new BitmapImage(new Uri(@"/Resources/Northstar_Smurfson.gif", UriKind.Relative));
         static System.Collections.Specialized.StringCollection log = new System.Collections.Specialized.StringCollection();
@@ -121,12 +133,17 @@ namespace VTOL
         public List<string> Game_Modes_List = new List<string>();
         public List<string> Game_MAP_List = new List<string>();
         public List<string> Game_WEAPON_List = new List<string>();
+        private static readonly Action EmptyDelegate = delegate { };
+        Zip_Install_Dialog ZipDialog = (new Zip_Install_Dialog());
+        int Progress_Tracker;
+        HandyControl.Controls.Dialog Diag;
+
 
         int completed_flag;
         public int pid;
         string Skin_Path = "";
         string Skin_Temp_Loc = "";
-      
+
         public Thunderstore_V1 Thunderstore_;
         Updater Update;
         public bool Animation_Start_Northstar { get; set; }
@@ -138,20 +155,26 @@ namespace VTOL
         {
             InitializeComponent();
             Application.Current.MainWindow.Closing += new CancelEventHandler(MainWindow_Closing);
-
             do_not_overwrite_Ns_file = Properties.Settings.Default.Ns_Startup;
             do_not_overwrite_Ns_file_Dedi = Properties.Settings.Default.Ns_Dedi;
+
             try
             {
+                /*Ref Code To see The ISO name for Lang
+                Console.WriteLine("Default Language Info:");
+                Console.WriteLine("* Name: {0}", ci.Name);
+                Console.WriteLine("* Display Name: {0}", ci.DisplayName);
+                Console.WriteLine("* English Name: {0}", ci.EnglishName);
+                Console.WriteLine("* 2-letter ISO Name: {0}", ci.TwoLetterISOLanguageName);
+                Console.WriteLine("* 3-letter ISO Name: {0}", ci.ThreeLetterISOLanguageName);
+                Console.WriteLine("* 3-letter Win32 API Name: {0}", ci.ThreeLetterWindowsLanguageName);
+                */
 
                 Phrases = new ObservableCollection<string>();
-              
+
 
                 //BG_panel_Main.BlurApply(40, new TimeSpan(0, 0, 1), TimeSpan.Zero);
-                Phrases.Append("gg");
-                Phrases.Append("private_match");
-                Phrases.Append("at");
-                Phrases.Append("cl");
+
                 DataContext = this;
                 Animation_Start_Northstar = false;
                 Animation_Start_Vanilla = false;
@@ -169,15 +192,30 @@ namespace VTOL
                 Updates_Panel.Visibility = Visibility.Hidden;
                 Drag_Drop_Overlay.Visibility = Visibility.Hidden;
                 Drag_Drop_Overlay_Skins.Visibility = Visibility.Hidden;
-                Select_Main();
                 string version = Assembly.GetExecutingAssembly().GetName().Version.ToString();
                 Install_Skin_Bttn.IsEnabled = false;
-                Set_About();
                 Badge.Visibility = Visibility.Collapsed;
                 GC.Collect();
                 this.VTOL.Title = String.Format("VTOL {0}", version);
+               
+                if (File.Exists(@"C:\ProgramData\VTOL_DATA\VARS\Language.txt"))
+                {
+                  ChangeLanguageTo(Read_From_TextFile_OneLine(@"C:\ProgramData\VTOL_DATA\VARS\Language.txt").Trim());
+                }
+                else
+                {
+                    CultureInfo ci = CultureInfo.InstalledUICulture;
+                    ChangeLanguageTo(ci.TwoLetterISOLanguageName);//do this here so there will be UI  texts showing up
+                    Write_To_Log("\nLanguage Detected was - " + ci.TwoLetterISOLanguageName);
+                }
                 Check_For_New_Northstar_Install();
-                GC.Collect();
+                Set_About();
+                Select_Main();
+                getOperatingSystemInfo();
+                getProcessorInfo();
+                string[] arguments = Environment.GetCommandLineArgs();
+
+                Console.WriteLine("GetCommandLineArgs: {0}", string.Join(", ", arguments));
 
                 if (do_not_overwrite_Ns_file==true)
                 {
@@ -205,10 +243,10 @@ namespace VTOL
 
 
 
-
                 string Header = Path.GetFullPath(Path.Combine(System.Reflection.Assembly.GetExecutingAssembly().Location, @"../"));
                 updaterModulePath = Path.Combine(Header, "VTOL_Updater.exe");
-               
+                GC.Collect();
+
             }
 
             catch (System.IO.DirectoryNotFoundException e)
@@ -240,7 +278,7 @@ namespace VTOL
                     {
                         Write_To_Log(ef.StackTrace);
 
-                        Send_Fatal_Notif("a fatal error occurred, please check the logs and preferably contact us in the VTOL discord thread or create a github issue.");
+                        Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_COMMON_CONTACT"));
                     }
 
 
@@ -256,7 +294,7 @@ namespace VTOL
                     }
                     catch (Exception ef)
                     {
-                        Send_Fatal_Notif("a fatal error occurred, please check the logs and preferably contact us in the VTOL discord thread or create a github issue.");
+                        Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_COMMON_CONTACT"));
                         Write_To_Log(ef.StackTrace);
 
                     }
@@ -276,7 +314,7 @@ namespace VTOL
                         Found_Install_Folder = true;
                         Titanfall2_Directory_TextBox.Text = Current_Install_Folder;
                         // Install_Textbox.BackColor = Color.White;
-                        Send_Info_Notif("\n找到目录： " + Current_Install_Folder + "\n");
+                        Send_Info_Notif(GetTextResource("NOTIF_INFO_FOUND_INSTALL_PATH") + Current_Install_Folder + "\n");
                         if (Directory.Exists(Current_Install_Folder))
                         {
 
@@ -286,12 +324,12 @@ namespace VTOL
                             {
 
 
-                                Install_NS.Content = "更新/修复北极星CN";
+                                Install_NS.Content = GetTextResource("UPDATE_REPAIR_NS");
                             }
                             else
                             {
 
-                                Install_NS.Content = "安装北极星CN";
+                                Install_NS.Content = GetTextResource("INSTALL_NS");
 
 
                             }
@@ -303,22 +341,22 @@ namespace VTOL
                     else
                     {
 
-                        Send_Warning_Notif("\nThe Launcher Tried to Auto Check For an existing CFG, Please Re-Install Northstar");
+                        Send_Warning_Notif(GetTextResource("NOTIF_WARN_AUTOCHECK_CFG"));
                     }
                 }
 
 
                 else
                 {
-                    Send_Warning_Notif("\nThe Launcher Tried to Auto Check For an existing CFG, Please Re-Install Northstar");
+                    Send_Warning_Notif(GetTextResource("NOTIF_WARN_AUTOCHECK_CFG"));
 
 
                 }
             }
             catch (System.IO.DirectoryNotFoundException e)
             {
-                Console.WriteLine("无法验证目录：" + Current_Install_Folder);
-                Send_Warning_Notif("\nThe Launcher Tried to Auto Check For an existing CFG, please use the manual Check to search.");
+                Write_To_Log("Could Not Verify Dir" + Current_Install_Folder);
+                Send_Warning_Notif(GetTextResource("NOTIF_WARN_AUTOCHECK_CFG"));
                 Write_To_Log(e.StackTrace);
 
 
@@ -341,6 +379,79 @@ namespace VTOL
             //set image source
             //   Gif_Image.UriSource = new Uri(@"/Resources/TF2_Vanilla_promo.gif");
 
+        }
+        //This function is used to get string content from Resource file.
+        public string GetTextResource(string ResourceName)
+        {
+            string TextResource;
+
+            try 
+            {
+                TextResource = VTOL.FindResource(ResourceName).ToString();
+            } 
+            catch(ResourceReferenceKeyNotFoundException ex)
+            {
+                Send_Fatal_Notif("a FATAL error has occured while requesting dynamic Text resource : " +ResourceName + " detail:" + ex);
+                return "undefined";
+            }
+            return TextResource;
+            
+        }
+        private async void ChangeLanguageTo(string LanguageCode)
+
+        {
+            try
+            {
+
+                ResourceDictionary dict = new ResourceDictionary();
+
+                dict.Source = new Uri(@"Resources\Languages\"+ LanguageCode + ".xaml", UriKind.Relative);
+
+                this.Resources.MergedDictionaries.Add(dict);
+                //  this.Resources.MergedDictionaries[0] = dict;
+
+                switch (LanguageCode)
+                {
+
+                    case "en":
+                        Language_Selection.SelectedIndex = 0;
+
+                        break;
+                    case "fr":
+                        Language_Selection.SelectedIndex = 1;
+
+                        break;
+                    case "de":
+                        Language_Selection.SelectedIndex = 2;
+
+                        break;
+                    case "cn":
+                        Language_Selection.SelectedIndex = 3;
+
+                        break;
+
+                }
+                saveAsyncFile(LanguageCode, @"C:\ProgramData\VTOL_DATA\VARS\Language.txt", true, false);
+                if (NS_Installed == true)
+                {
+
+
+                    Install_NS.Content = GetTextResource("UPDATE_REPAIR_NS");
+                }
+                else
+                {
+
+                    Install_NS.Content = GetTextResource("INSTALL_NS");
+
+
+                }
+                Badge.Text = GetTextResource("BADGE_NEW_UPDATE_AVAILABLE");
+            }
+            catch (Exception ex)
+            {
+                Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_COMMON_ERROR_OCCURRED"));
+                Write_To_Log(ex.ToString() + "\n" + ex.Message);
+            }
         }
         public void LIST_CLICK(object sender, RoutedEventArgs e)
         {
@@ -404,7 +515,7 @@ namespace VTOL
             }
             catch (Exception ex)
             {
-                Send_Fatal_Notif("Error Occured, Please Check Logs for details");
+                Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_COMMON_ERROR_OCCURRED"));
                 Write_To_Log(ex.ToString());
             }
         }
@@ -439,21 +550,32 @@ namespace VTOL
         }
         void Download_Install(object sender, RoutedEventArgs e)
         {
-            Send_Info_Notif("下载任务开始，此过程可能持续5-10分钟，请耐心等候");
+            try
+            {
 
-            var objname = ((System.Windows.Controls.Button)sender).Tag.ToString();
-            string[] words = objname.Split("|");
-            // Send_Success_Notif(words[0]);
-            LAST_INSTALLED_MOD = (words[1]);
 
-            parse_git_to_zip(words[0]);
+                Send_Info_Notif(GetTextResource("NOTIF_INFO_DOWNLOAD_START"));
+                var objname = ((System.Windows.Controls.Button)sender).Tag.ToString();
+                string[] words = objname.Split("|");
+                // Send_Success_Notif(words[0]);
+                LAST_INSTALLED_MOD = (words[1]);
 
+                parse_git_to_zip(words[0]);
+            }catch (Exception ex)
+            {
+                Mod_Progress_BAR.Value = 0;
+                Mod_Progress_BAR.ShowText = false;
+                Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_COMMON_ERROR_OCCURRED"));
+                Write_To_Log(ex.ToString());
+                Write_To_Log(ex.Message);
+
+            }
         }
         void Open_Package_Webpage(object sender, RoutedEventArgs e)
         {
             var val = ((System.Windows.Controls.Button)sender).Tag.ToString();
 
-            Send_Info_Notif("正在打开 - " + val);
+            Send_Info_Notif(GetTextResource("NOTIF_INFO_OPENING") + val);
             System.Diagnostics.Process.Start(new ProcessStartInfo
             {
                 FileName = val,
@@ -576,8 +698,7 @@ namespace VTOL
                 // itemsList.Add(item.full_name.ToString());
             }
 
-            Load_Line.IsRunning = false;
-            Load_Line.Visibility = Visibility.Hidden;
+  
             return itemsList;
 
         }
@@ -600,9 +721,7 @@ Current Features:
 *Install Skins From a Zip
 *Launch The Dedicated Northsatar Server Client
 *Browse and Install Mods From the Thunderstore Mod Repo
--Features in development:
-*Intent to Create Custom Servers using this installer as a base to configure and fine tune setups
-
+*Configure a Dedicated Server From Start To Finish in the Application.
 
 -Please Do suggest any new features and/or Improvements Through the Git issue tracker, or by sending me a personal Message.
 Thank you again to all you Pilots, Hope we Wreak havoc on the Frontier for years to come.
@@ -612,7 +731,8 @@ Gif image used on Northstar is from @Smurfson.
 
 Big Thanks to - 
 @Ralley#3354
-
+@Mysterious#7899
+@wolf109909#5291
 @EmmaM#6474
 @laundmo#7544
 @E3VL#6669
@@ -932,7 +1052,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
 
             catch (Exception e)
             {
-                Send_Fatal_Notif("Fatal Error Occured, Please Check Logs!");
+                Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_COMMON_LOG"));
 
                 Write_To_Log("The process failed: " + e.ToString());
             }
@@ -963,7 +1083,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 else
                 {
 
-                    Send_Error_Notif("\n Directory is empty");
+                    Send_Error_Notif(GetTextResource("NOTIF_ERROR_DIRECTORY_EMPTY"));
                     return;
 
                 }
@@ -975,7 +1095,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
 
             {
 
-                Send_Error_Notif("\n Invalid Path fed, that folder is not available or does not exist");
+                Send_Error_Notif(GetTextResource("NOTIF_ERROR_INVALID_PATH_FED"));
                 failed_search_counter++;
 
             }
@@ -1076,7 +1196,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 }
                 else
                 {
-                    Send_Error_Notif("\nDirectory Check Unsuccessful");
+                    Send_Error_Notif(GetTextResource("NOTIF_ERROR_DIRECTORY_CHECK_FAILED"));
                     NS_Installed = false;
 
 
@@ -1095,7 +1215,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             if (NS_Installed == false)
             {
 
-                Send_Error_Notif("\n无法找到《泰坦陨落2》游戏文件或北极星CN组件丢失，请尝试检查北极星CN更新或联系官方！");
+                Send_Error_Notif(GetTextResource("NOTIF_ERROR_NS_BAD_INTEGRITY"));
 
                 Install_NS_EXE_Textbox.Foreground = Brushes.Red;
 
@@ -1104,7 +1224,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             {
 
                 Install_NS_EXE_Textbox.Foreground = Brushes.Green;
-                Send_Success_Notif("验证成功!");
+                Send_Success_Notif(GetTextResource("NOTIF_SUCCESS_INTEGRITY_VERIFIED"));
 
 
             }
@@ -1128,7 +1248,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             }
             catch (System.IO.FileNotFoundException e)
             {
-                Send_Error_Notif("Could Not find " + Filepath);
+                Send_Error_Notif(GetTextResource("NOTIF_ERROR_CANNOT_FIND") + Filepath);
                 Write_To_Log(e.StackTrace);
 
 
@@ -1156,7 +1276,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             }
             catch (System.IO.FileNotFoundException e)
             {
-                Send_Error_Notif("Could Not find " + Filepath);
+                Send_Error_Notif(GetTextResource("NOTIF_ERROR_CANNOT_FIND") + Filepath);
                 Write_To_Log(e.StackTrace);
 
 
@@ -1248,13 +1368,13 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                         Parse_Release();
                     }
                 }
-
+                
             }
             else
             {
 
 
-                Send_Error_Notif("\n Invalid Url Called");
+                Send_Error_Notif(GetTextResource("NOTIF_ERROR_INVALID_URL"));
             }
 
         }
@@ -1270,18 +1390,24 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 Properties.Settings.Default.Version = myJObject.SelectToken("tag_name").Value<string>();
                 Properties.Settings.Default.Save();
 
-                Send_Info_Notif("\n发现最新版本： - \n"+out_);
-
+                Send_Info_Notif(GetTextResource("NOTIF_INFO_RELEASE_PARSED") + out_);
+                if (Directory.Exists(@"C:\ProgramData\VTOL_DATA\temp\" + json_name))
+                {
+                    if (File.Exists(@"C:\ProgramData\VTOL_DATA\temp\" + json_name))
+                    {
+                        File.Delete(@"C:\ProgramData\VTOL_DATA\temp\" + json_name);
+                    }
+                }
                 return out_;
 
             }
             else
             {
-                Send_Error_Notif("\nRelease Not Found!!");
+                Send_Error_Notif(GetTextResource("NOTIF_ERROR_RELEASE_NOT_FOUND"));
 
                 return null;
             }
-          
+            
 
         }
         private void Parse_Release(string json_name = "temp.json")
@@ -1292,20 +1418,27 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 var myJObject = JObject.Parse(myJsonString);
 
 
+                current_Northstar_version_Url = myJObject.SelectToken("assets.browser_download_url").Value<string>();
                 Properties.Settings.Default.Version = myJObject.SelectToken("tag_name").Value<string>();
                 Properties.Settings.Default.Save();
-                current_Northstar_version_Url = "https://cdn.wolf109909.top/northstarcnmirror/" + Properties.Settings.Default.Version + ".zip";
-                Send_Info_Notif("\n发现北极星CN最新版本： - \n"+current_Northstar_version_Url);
+
+                Send_Info_Notif(GetTextResource("NOTIF_INFO_RELEASE_PARSED") + current_Northstar_version_Url);
 
             }
             else
             {
-                Send_Error_Notif("\n无法找到北极星CN版本信息，请联系官方！");
+                Send_Error_Notif(GetTextResource("NOTIF_ERROR_RELEASE_NOT_FOUND"));
 
 
             }
 
-
+            if (Directory.Exists(@"C:\ProgramData\VTOL_DATA\temp\" + json_name))
+            {
+                if (File.Exists(@"C:\ProgramData\VTOL_DATA\temp\" + json_name))
+                {
+                File.Delete(@"C:\ProgramData\VTOL_DATA\temp\" + json_name);
+                }
+            }
         }
         private void DirectoryCopy(
               string sourceDirName, string destDirName, bool copySubDirs)
@@ -1369,11 +1502,48 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 File.Copy(newPath, newPath.Replace(sourcePath, targetPath), true);
             }
         }
-        private void Unpack_To_Location_Custom(string Target_Zip, string Destination, bool Clean_Thunderstore = false)
+     
+        public string Current_Zip;
+        private void zipProgress(object sender, ZIPI.ExtractProgressEventArgs e)
+        {
+
+
+            //     Z.Add_Progress(10, Target_Zip);
+            //   ZipFile.ExtractToDirectory(Target_Zip, Destination, true);
+            //  Z.Add_Progress(80, Target_Zip);
+
+            if (e.EventType == ZIPI.ZipProgressEventType.Extracting_BeforeExtractAll)
+            {
+                //  ZipDialog.Current_File_Label.Content = Current_Zip;
+             //Diag = HandyControl.Controls.Dialog.Show(ZipDialog);
+
+
+            }
+            //  this.ZIPI.progressbar1.Value = (int)((e.BytesTransferred * 100) / e.TotalBytesToTransfer);
+
+            if (e.EventType == ZIPI.ZipProgressEventType.Extracting_AfterExtractAll)
+                    {
+             //   Diag.Close();
+            //    dialog.Close();
+               // if (e.BytesTransferred > 0 && e.TotalBytesToTransfer > 0)
+            //    {
+                  //  int progress = (int)Math.Floor((decimal)((e.BytesTransferred * 100) / e.TotalBytesToTransfer));
+                   
+              //  }
+            }
+
+          //  Z.Add_Progress(0, Current_Zip);
+
+            //    Z.Add_Progress(90, Current_Zip);
+            // Send_Info_Notif(e.EntriesExtracted.ToString());
+            //Send_Info_Notif(e.BytesTransferred.ToString());
+           
+        }
+        private void Unpack_To_Location_Custom(string Target_Zip, string Destination, bool Clean_Thunderstore = false, bool clean_normal = false)
         {
             //ToDo Check if url or zip location
             //add drag and drop
-
+            
             try
             {
                 string Dir_Final = "";
@@ -1388,7 +1558,34 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
 
                     if (fileExt == ".zip")
                     {
-                        ZipFile.ExtractToDirectory(Target_Zip, Destination, true);
+                        //     Zip_Install_Dialog Z = (new Zip_Install_Dialog());
+                        //    var d = HandyControl.Controls.Dialog.Show(Z);
+                        //   var dialog = HandyControl.Controls.Dialog.Show(Z);
+                        //     Z.Add_Progress(0, Target_Zip);
+
+                        //     Z.Add_Progress(10, Target_Zip);
+                        //   ZipFile.ExtractToDirectory(Target_Zip, Destination, true);
+                        //  Z.Add_Progress(80, Target_Zip);
+                        Current_Zip = Target_Zip;
+
+                        using (ZIPI.ZipFile zip = ZIPI.ZipFile.Read(Target_Zip))
+                        {
+                            zip.ExtractProgress += zipProgress;
+
+                            
+
+                                zip.ExtractAll(Destination, ZIPI.ExtractExistingFileAction.OverwriteSilently);
+
+                            
+                            
+                           // Diag.Close();
+                        }
+
+
+
+
+
+                        //dialog.Close();
                         // Send_Success_Notif("\nUnpacking Complete!\n");
                         if (Clean_Thunderstore == true)
                         {
@@ -1404,20 +1601,20 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                                     // If file found, delete it    
                                     File.Delete(Path.Combine(Destination, "icon.png"));
                                 }
-                                else { Send_Warning_Notif("无法找到清理文件！"); }
+                                else { Send_Warning_Notif(GetTextResource("NOTIF_WARN_CLEANUP_FILES_NOT_FOUND")); }
                                 if (File.Exists(Path.Combine(Destination, "manifest.json")))
                                 {
                                     // If file found, delete it    
                                     File.Delete(Path.Combine(Destination, "manifest.json"));
                                 }
-                                else { Send_Warning_Notif("无法找到清理文件！"); }
+                                else { Send_Warning_Notif(GetTextResource("NOTIF_WARN_CLEANUP_FILES_NOT_FOUND")); }
 
                                 if (File.Exists(Path.Combine(Destination, "README.md")))
                                 {
                                     // If file found, delete it    
                                     File.Delete(Path.Combine(Destination, "README.md"));
                                 }
-                                else { Send_Warning_Notif("无法找到清理文件！"); }
+                                else { Send_Warning_Notif(GetTextResource("NOTIF_WARN_CLEANUP_FILES_NOT_FOUND")); }
 
 
 
@@ -1446,8 +1643,8 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                                         Dir_Final = Destinfo.Parent.FullName + @"\" + diArr[0].Name;
                                         if ((Destinfo.Parent.FullName + @"\" + diArr[0].Name).Contains("keyvalues") || (Destinfo.Parent.FullName + @"\" + diArr[0].Name).Contains("vpk") || (Destinfo.Parent.FullName + @"\" + diArr[0].Name).Contains("materials") || (Destinfo.Parent.FullName + @"\" + diArr[0].Name).Contains("resource") || (Destinfo.Parent.FullName + @"\" + diArr[0].Name).Contains("scripts"))
                                         {
-                                            Send_Error_Notif("Mod has been Detected as incompatible!, The mod creator must be contacted to remedy this issue!");
-                                            Send_Warning_Notif("If the mod is enabled please disable it immediately!");
+                                            Send_Error_Notif(GetTextResource("NOTIF_ERROR_MOD_INCOMPATIBLE"));
+                                            Send_Warning_Notif(GetTextResource("NOTIF_WARN_SUGGEST_DISABLE_MOD"));
                                             if (Directory.Exists(Current_Install_Folder + @"\NS_Downloaded_Mods"))
                                             {
                                                 Directory.Delete(Current_Install_Folder + @"\NS_Downloaded_Mods", true);
@@ -1473,15 +1670,15 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                                 if (Dir_Final == "")
                                 {
 
-                                    Send_Error_Notif("Mod has been Detected as incompatible!, The mod creator must be contacted to remedy this issue!");
-                                    Send_Warning_Notif("If the mod is enabled please disable it immediately!");
+                                    Send_Error_Notif(GetTextResource("NOTIF_ERROR_MOD_INCOMPATIBLE"));
+                                    Send_Warning_Notif(GetTextResource("NOTIF_WARN_SUGGEST_DISABLE_MOD"));
 
                                     return;
                                 }
                                 else
                                 {
-                                    Send_Info_Notif("Unpacked " + Path.GetFileName(Target_Zip) + " to " + Dir_Final);
-                                    Send_Success_Notif("Installed - " + LAST_INSTALLED_MOD);
+                                    Send_Info_Notif(GetTextResource("NOTIF_INFO_GROUP_UNPACK_UNPACKED") +"  "+ Path.GetFileName(Target_Zip) +"  "+ GetTextResource("NOTIF_INFO_GROUP_UNPACK_TO") + "  "+Dir_Final);
+                                    Send_Success_Notif(GetTextResource("NOTIF_SUCCESS_INSTALLED_DASH") + LAST_INSTALLED_MOD);
 
                                 }
                                 if (Directory.Exists(Current_Install_Folder + @"\NS_Downloaded_Mods"))
@@ -1493,7 +1690,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                             catch (IOException ioExp)
                             {
                                 Write_To_Log(ioExp.Message);
-                                Send_Warning_Notif(" Issue Detected, Please Check Logs!");
+                                Send_Warning_Notif(GetTextResource("NOTIF_WARN_ISSUE_DETECTED"));
 
                             }
 
@@ -1503,8 +1700,8 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                     else
                     {
                         //Main_Window.SelectedTab = Main;
-                      
-                        Send_Error_Notif("\n目标文件格式错误!\n");
+
+                        Send_Warning_Notif(GetTextResource("NOTIF_ERROR_OBJ_NOT_ZIP"));
 
 
                     }
@@ -1519,13 +1716,26 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
 
                     if (fileExt == ".zip")
                     {
-                        ZipFile.ExtractToDirectory(Target_Zip, Destination, true);
-                        // Send_Success_Notif("\nUnpacking Complete!\n");
-                    }
+                        if (clean_normal == true)
+                        {
+                            //TODO
+                        //    string folderName = Destination;
+
+                        //    var directory = new DirectoryInfo(folderName);
+                         //   var Destinfo = new DirectoryInfo(Destination);
+                            ZipFile.ExtractToDirectory(Target_Zip, Destination, true);
+
+                        }
+                        else
+                        {
+                            ZipFile.ExtractToDirectory(Target_Zip, Destination, true);
+                            // Send_Success_Notif("\nUnpacking Complete!\n");
+                        }
+                        }
                     else
                     {
                         //Main_Window.SelectedTab = Main;
-                        Send_Fatal_Notif("\n目标文件格式错误!\n");
+                        Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_OBJ_NOT_ZIP"));
 
 
                     }
@@ -1534,13 +1744,13 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 {
                     if (!File.Exists(Target_Zip))
                     {
-                        Send_Error_Notif("\n目标文件丢失!\n");
+                        Send_Error_Notif(GetTextResource("NOTIF_ERROR_ZIP_NOT_EXIST"));
 
 
                     }
                     if (!Directory.Exists(Destination))
                     {
-                        Send_Error_Notif("\n目标文件路径不存在，请检查游戏目录是否设置正确！\n");
+                        Send_Error_Notif(GetTextResource("NOTIF_ERROR_ZIP_NOT_EXIST_CHECK_PATH"));
 
                     }
                 }
@@ -1549,7 +1759,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             {
 
                 Write_To_Log(ex.ToString());
-                Send_Fatal_Notif("Fatal Error Occured, Please Check Logs!");
+                Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_COMMON_LOG"));
 
             }
         }
@@ -1575,7 +1785,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
 
 
 
-            Send_Info_Notif("\n正在将 " + Path.GetFileName(Target_Zip) + " 解压至 " + Destination_Zip);
+            Send_Info_Notif(GetTextResource("NOTIF_INFO_GROUP_UNPACK_UNPACKING") + Path.GetFileName(Target_Zip) + GetTextResource("NOTIF_INFO_GROUP_UNPACK_TO") + Destination_Zip);
             if (File.Exists(Target_Zip) && Directory.Exists(Destination_Zip))
             {
                 string fileExt = System.IO.Path.GetExtension(Target_Zip);
@@ -1583,37 +1793,42 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 if (fileExt == ".zip")
                 {
                     ZipFile.ExtractToDirectory(Target_Zip, Destination_Zip, true);
-                    Send_Info_Notif("\n解压完成!");
-                    if (File.Exists(Current_Install_Folder+@"\ns_startup_args_dedi.txt") && File.Exists(Current_Install_Folder+@"\ns_startup_args.txt"))
+                    Send_Info_Notif(GetTextResource("NOTIF_INFO_UNPACK_COMPLETE"));
+                    if (File.Exists(Current_Install_Folder + @"\ns_startup_args_dedi.txt") && File.Exists(Current_Install_Folder + @"\ns_startup_args.txt"))
                     {
                         if (do_not_overwrite_Ns_file == true)
                         {
-                            Send_Info_Notif("\n正在恢复文件");
-                            if (Directory.Exists(Current_Install_Folder+@"\TempCopyFolder\"))
+                            Send_Info_Notif(GetTextResource("NOTIF_INFO_RESTORING_FILES"));
+                            if (Directory.Exists(Current_Install_Folder + @"\TempCopyFolder\"))
                             {
-                                System.IO.File.Copy(Current_Install_Folder+@"\TempCopyFolder\ns_startup_args.txt", Current_Install_Folder+@"\ns_startup_args.txt", true);
-                                Send_Info_Notif("\n正在清理残留文件");
+                                System.IO.File.Copy(Current_Install_Folder + @"\TempCopyFolder\ns_startup_args.txt", Current_Install_Folder + @"\ns_startup_args.txt", true);
 
-                                Directory.Delete(Current_Install_Folder+@"\TempCopyFolder", true);
-                                Send_Info_Notif("\n安装完毕!");
+                                Send_Info_Notif(GetTextResource("NOTIF_INFO_CLEANING_RESIDUAL"));
+
                             }
 
 
                         }
                         if (do_not_overwrite_Ns_file_Dedi == true)
                         {
-                            Send_Info_Notif("\n正在恢复文件");
-                            if (Directory.Exists(Current_Install_Folder+@"\TempCopyFolder\"))
+                            Send_Info_Notif(GetTextResource("NOTIF_INFO_RESTORING_FILES"));
+                            if (Directory.Exists(Current_Install_Folder + @"\TempCopyFolder\"))
                             {
-                                System.IO.File.Copy(Current_Install_Folder+@"\TempCopyFolder\ns_startup_args_dedi.txt", Current_Install_Folder+@"\ns_startup_args_dedi.txt", true);
-                                Send_Info_Notif("\n正在清理残留文件");
+                                System.IO.File.Copy(Current_Install_Folder + @"\TempCopyFolder\autoexec_ns_server.cfg", Current_Install_Folder + @"\R2Northstar\mods\Northstar.CustomServers\mod\cfg\autoexec_ns_server.cfg", true);
 
-                                Directory.Delete(Current_Install_Folder+@"\TempCopyFolder", true);
-                                Send_Info_Notif("\n安装完毕!");
+                                System.IO.File.Copy(Current_Install_Folder + @"\TempCopyFolder\ns_startup_args_dedi.txt", Current_Install_Folder + @"\ns_startup_args_dedi.txt", true);
+                                Send_Info_Notif(GetTextResource("NOTIF_INFO_CLEANING_RESIDUAL"));
+
                             }
 
 
                         }
+                        if (Directory.Exists(Current_Install_Folder + @"\TempCopyFolder"))
+                        {
+                            Directory.Delete(Current_Install_Folder + @"\TempCopyFolder", true);
+                        }
+                        Send_Info_Notif(GetTextResource("NOTIF_INFO_INSTALL_COMPLETE"));
+
                     }
 
                 }
@@ -1621,13 +1836,13 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 {
                     if (!File.Exists(Target_Zip))
                     {
-                        Send_Error_Notif("\n错误：无法读取下载的文件，请联系官方！");
+                        Send_Error_Notif(GetTextResource("NOTIF_ERROR_ZIP_NOT_EXIST"));
 
 
                     }
                     if (!Directory.Exists(Destination_Zip))
                     {
-                        Send_Error_Notif("\n错误：找不到游戏目录，请检查目录设置是否正确！");
+                        Send_Error_Notif(GetTextResource("NOTIF_ERROR_ZIP_NOT_EXIST_CHECK_PATH"));
 
                     }
                 }
@@ -1636,7 +1851,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             {
 
                 // Main_Window.SelectedTab = Main;
-                Send_Error_Notif("\n错误：文件下载目标格式错误！\n");
+                Send_Error_Notif(GetTextResource("NOTIF_ERROR_OBJ_NOT_ZIP"));
 
             }
         }
@@ -1666,25 +1881,25 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                     else
                     {
 
-                        Console.WriteLine("正在重试： " + dirInfo);
+                        Console.WriteLine("Trying again at " + dirInfo);
 
                     }
                     if (dirInfo == null)
                     {
-                        Console.WriteLine(dirInfo.FullName + "可能不是正确的文件夹");
+                        Console.WriteLine(dirInfo.FullName + "This is not a valid Folder????!");
                         continue;
 
                     }
                     // Resursive call for each subdirectory.
                 }
 
-                Console.WriteLine("\n无法在 " +root+ " - 目录中找到文件，正在继续查找");
+                Console.WriteLine("\nCould not Find the Install at " + root + " - Continuing Traversal");
 
             }
             catch (Exception e)
             {
                 Write_To_Log(e.Message);
-                Send_Fatal_Notif("Fatal Error Occured, Please Check Logs!");
+                Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_COMMON_LOG"));
 
                 // Log_Box.AppendText("\nCould not Find the Install at " +root+ " - Continuing Traversal");
             }
@@ -1785,13 +2000,13 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                     // Resursive call for each subdirectory.
                 }
 
-                Send_Error_Notif("\nCould not Find the Install at " + root + " - Continuing Traversal");
+                Send_Error_Notif(GetTextResource("NOTIF_ERROR_GROUP_DIRECTORY_TREE_CANNOT_FIND_INSTALL_AT") + root + GetTextResource("NOTIF_ERROR_GROUP_DIRECTORY_TREE_CONTINUE_TRAVERSE"));
 
             }
             catch (NullReferenceException e)
             {
                 Write_To_Log(e.Message);
-                Send_Fatal_Notif("Fatal Error Occured, Please Check Logs!");
+                Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_COMMON_LOG"));
 
 
             }
@@ -1800,6 +2015,8 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
         private void parse_git_to_zip(string address)
         {
 
+            Mod_Progress_BAR.Value = 0;
+            Mod_Progress_BAR.ShowText = true;
 
             if (webClient != null)
                 return;
@@ -1809,12 +2026,14 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             {
 
                 webClient.DownloadFileAsync(new Uri(address), Current_Install_Folder + @"\NS_Downloaded_Mods\" + LAST_INSTALLED_MOD + ".zip");
+                webClient.DownloadProgressChanged += new DownloadProgressChangedEventHandler(DownloadProgressCallback4);
 
             }
             else
             {
                 Directory.CreateDirectory(Current_Install_Folder + @"\NS_Downloaded_Mods");
                 webClient.DownloadFileAsync(new Uri(address), Current_Install_Folder + @"\NS_Downloaded_Mods\" + LAST_INSTALLED_MOD + ".zip");
+                webClient.DownloadProgressChanged += new DownloadProgressChangedEventHandler(DownloadProgressCallback4);
 
 
             }
@@ -1830,15 +2049,21 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
 
 
         }
+        private  void DownloadProgressCallback4(object sender, DownloadProgressChangedEventArgs e)
+        {
+            // Displays the operation identifier, and the transfer progress.
+            Console.WriteLine("{0}    downloaded {1} of {2} bytes. {3} % complete...", (string)e.UserState, e.BytesReceived,e.TotalBytesToReceive,e.ProgressPercentage);
 
+            Mod_Progress_BAR.Value = e.ProgressPercentage;
+        }
         private void Auto_Install_And_verify()
         {
             failed_search_counter = 0;
-            Send_Info_Notif("\nLooking For Titanfall2 Install");
+            Send_Info_Notif(GetTextResource("NOTIF_INFO_FINDING_GAME"));
             while (Found_Install_Folder == false && failed_search_counter < 1)
             {
 
-                Send_Info_Notif("\nAutomatically Looking For The Northstar And Titandfall Install :-)");
+                Send_Info_Notif(GetTextResource("NOTIF_INFO_LOOKING_FOR_INSTALL_SMILEYFACE"));
                 //  Cursor.Current = Cursors.WaitCursor;
                 // Log_Box.AppendText("\nLooking Under the Directory  -" +@"C:\Program Files (x86)\Steam");
                 FindNSInstall("Titanfall2", @"C:\Program Files (x86)\Steam");
@@ -1852,7 +2077,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 {
                     Titanfall2_Directory_TextBox.Background = Brushes.Red;
                     Install_NS_EXE_Textbox.Background = Brushes.Red;
-                    Send_Fatal_Notif("\n无法自动搜索游戏安装目录，请手动设置！");
+                    Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_GAME_INSTALL_NOT_FOUND"));
                     break;
 
 
@@ -1867,7 +2092,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 saveAsyncFile(Current_Install_Folder, @"C:\ProgramData\VTOL_DATA\VARS\INSTALL.txt", false, false);
                 // Log_Box.AppendText("\nFound Install Location at " + Current_Install_Folder + "\n");
                 NSExe = Get_And_Set_Filepaths(Current_Install_Folder, "NorthstarLauncher.exe");
-                Send_Success_Notif("发现安装目录!正在检查安装完整性...");
+                Send_Success_Notif(GetTextResource("NOTIF_SUCCESS_FOUND_INSTALL"));
                 //Checking if the path Given Returned Something Meaningful. I know i could do this better, but its 3.37am and i feel like im dying from this cold :|.
                 Check_Integrity_Of_NSINSTALL();
             }
@@ -1894,7 +2119,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             catch (Exception ex)
             {
                 isValid = false;
-                Send_Fatal_Notif("Fatal Error Occured, Please Check Logs!");
+                Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_COMMON_LOG"));
                 Write_To_Log(ex.StackTrace);
             }
 
@@ -1909,10 +2134,10 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 Dsiabled_ListBox.ItemsSource = null;
                 Mod_Directory_List_Active.Clear();
                 Mod_Directory_List_InActive.Clear();
-                Console.WriteLine("In Mods!");
+             //   Console.WriteLine("In Mods!");
                 if (Current_Install_Folder == null || Current_Install_Folder == "" || !Directory.Exists(Current_Install_Folder))
                 {
-                    HandyControl.Controls.Growl.AskGlobal("无法找到安装目录！手动设置！", isConfirmed =>
+                    HandyControl.Controls.Growl.AskGlobal("Could Not find That Install Location !!!, please renavigate to the Correct Install Path!", isConfirmed =>
                      {
                          install_Prompt = isConfirmed;
                          return true;
@@ -1940,9 +2165,9 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                             //Log_Box.AppendText("Current Mod Dir Found At - "+NS_Mod_Dir);
                             if (!Directory.Exists(NS_Mod_Dir))
                             {
-                                Send_Fatal_Notif("\nMod 文件夹为空");
+                                Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_MOD_DIRECTORY_EMPTY"));
                                 // Main_Window.SelectedTab = Main;
-                                Send_Fatal_Notif("\n北极星CN似乎没有正确安装，是否重新安装？");
+                                Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_NS_NOT_INSTALLED_PROPERLY"));
 
                             }
                             else if (IsValidPath(NS_Mod_Dir) == true)
@@ -1955,19 +2180,18 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                                 {
                                     if (IsDirectoryEmpty(dirInfo))
                                     {
-                                        Send_Info_Notif("No inactive Mods Found");
-
+                                        Send_Info_Notif(GetTextResource("NOTIF_INFO_NO_INACTIVE_MODS"));
                                     }
                                     if (Template_traverse(dirInfo, "Locked_Folder") == true)
                                     {
 
-                                        Console.WriteLine("Inactive - " + dirInfo.Name);
+                                     //   Console.WriteLine("Inactive - " + dirInfo.Name);
                                         Mod_Directory_List_InActive.Add(dirInfo.Name);
                                         //  Log_Box.AppendText(dirInfo.Name);
                                     }
                                     else
                                     {
-                                        Console.WriteLine("Active - " + dirInfo.Name);
+                                       // Console.WriteLine("Active - " + dirInfo.Name);
 
                                         Mod_Directory_List_Active.Add(dirInfo.Name);
                                         //  Log_Box.AppendText(dirInfo.Name);
@@ -1982,14 +2206,14 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
 
                                 //   Log_Box.AppendText("\nInvalid Path");
                                 //   Main_Window.SelectedTab = Main;
-                                Send_Fatal_Notif("\n北极星CN似乎没有正确安装，是否重新安装？");
+                                Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_NS_NOT_INSTALLED_PROPERLY"));
                             }
                         }
                         else
                         {
                             // Main_Window.SelectedTab = Main;
 
-                            Send_Fatal_Notif("\n北极星CN还没有被安装, 是否需要安装？");
+                            Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_NS_NOT_INSTALLED"));
 
 
                         }
@@ -1998,16 +2222,25 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                     else
                     {
 
-                        Send_Fatal_Notif("\n错误的游戏目录！请重新设置！");
+                        Send_Fatal_Notif(GetTextResource("NOTIF_FATALL_GAME_PATH_INVALID"));
 
                     }
                 }
             }
             catch (Exception ex)
             {
+                if(ex.StackTrace == "Sequence contains no elements")
+                {
+                    Send_Info_Notif(GetTextResource("NOTIF_INFO_NO_MODS_FOUND"));
 
-                Write_To_Log(ex.StackTrace);
-                Send_Fatal_Notif("Fatal Error Occured, Please Check Logs!");
+                }
+                else
+                {
+                    Write_To_Log(ex.StackTrace);
+                    Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_COMMON_LOG"));
+
+                }
+
 
 
             }
@@ -2016,32 +2249,37 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
         }
         void Install_NS_METHOD()
         {
+            try { 
 
             completed_flag = 0;
-            Read_Latest_Release("https://api.github.com/repos/R2NorthstarCN/R2NorthstarCN_Launcher/releases/latest");
+            Read_Latest_Release("https://api.github.com/repos/R2Northstar/Northstar/releases/latest");
             //  Is file downloading yet?
 
             if (webClient != null)
                 return;
             webClient = new WebClient();
             webClient.DownloadFileCompleted += new AsyncCompletedEventHandler(Completed);
-            if (File.Exists(Current_Install_Folder + @"\ns_startup_args_dedi.txt") && File.Exists(Current_Install_Folder + @"\ns_startup_args.txt"))
+            string x = "";
+            if (File.Exists(Current_Install_Folder + @"\ns_startup_args_dedi.txt") && File.Exists(Current_Install_Folder + @"\ns_startup_args.txt") && File.Exists(GetFile(Current_Install_Folder, "autoexec_ns_server.cfg").First()))
             {
+                x = GetFile(Current_Install_Folder, "autoexec_ns_server.cfg").First();
+
                 if (do_not_overwrite_Ns_file_Dedi == true)
                 {
                     if (Directory.Exists(Current_Install_Folder + @"\TempCopyFolder"))
                     {
-                        Send_Info_Notif("\n正在备份配置文件...");
-
+                        Send_Info_Notif(GetTextResource("NOTIF_INFO_BACKING_UP_ARG_FILES"));
                         System.IO.File.Copy(Current_Install_Folder + @"\ns_startup_args.txt", Current_Install_Folder + @"\TempCopyFolder\ns_startup_args.txt", true);
+                        System.IO.File.Copy(x, Current_Install_Folder + @"\TempCopyFolder\autoexec_ns_server.cfg", true);
 
                         System.IO.File.Copy(Current_Install_Folder + @"\ns_startup_args_dedi.txt", Current_Install_Folder + @"\TempCopyFolder\ns_startup_args_dedi.txt", true);
                     }
                     else
                     {
 
-                        Send_Info_Notif("\n正在创建目录并备份文件...");
+                        Send_Info_Notif(GetTextResource("NOTIF_INFO_CREATING_DIRECTORY_AND_BACKUP_ARGS"));
                         System.IO.Directory.CreateDirectory(Current_Install_Folder + @"\TempCopyFolder");
+                        System.IO.File.Copy(x, Current_Install_Folder + @"\TempCopyFolder\autoexec_ns_server.cfg", true);
 
                         System.IO.File.Copy(Current_Install_Folder + @"\ns_startup_args.txt", Current_Install_Folder + @"\TempCopyFolder\ns_startup_args.txt", true);
                         System.IO.File.Copy(Current_Install_Folder + @"\ns_startup_args_dedi.txt", Current_Install_Folder + @"\TempCopyFolder\ns_startup_args_dedi.txt", true);
@@ -2052,7 +2290,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 {
                     if (Directory.Exists(Current_Install_Folder + @"\TempCopyFolder"))
                     {
-                        Send_Info_Notif("\n正在备份配置文件...");
+                        Send_Info_Notif(GetTextResource("NOTIF_INFO_BACKING_UP_ARG_FILES"));
 
                         System.IO.File.Copy(Current_Install_Folder + @"\ns_startup_args.txt", Current_Install_Folder + @"\TempCopyFolder\ns_startup_args.txt", true);
 
@@ -2061,7 +2299,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                     else
                     {
 
-                        Send_Info_Notif("\n正在创建目录并备份文件...");
+                        Send_Info_Notif(GetTextResource("NOTIF_INFO_CREATING_DIRECTORY_AND_BACKUP_ARGS"));
                         System.IO.Directory.CreateDirectory(Current_Install_Folder + @"\TempCopyFolder");
 
                         System.IO.File.Copy(Current_Install_Folder + @"\ns_startup_args.txt", Current_Install_Folder + @"\TempCopyFolder\ns_startup_args.txt", true);
@@ -2071,7 +2309,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                     Directory.CreateDirectory(@"C:\ProgramData\VTOL_DATA\Releases\");
                     webClient.DownloadFileAsync(new Uri(current_Northstar_version_Url), @"C:\ProgramData\VTOL_DATA\Releases\Northstar_Release.zip");
 
-                    Send_Warning_Notif("\n开始执行安装程序！");
+                    Send_Warning_Notif(GetTextResource("NOTIF_WARN_INSTALL_START"));
 
 
 
@@ -2080,8 +2318,8 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 {
 
                     Directory.CreateDirectory(@"C:\ProgramData\VTOL_DATA\Releases\");
-                    webClient.DownloadFileAsync(new Uri(current_Northstar_version_Url), @"C:\ProgramData\VTOL_DATA\Releases\NorthStar_Release.zip");
-                    Send_Warning_Notif("\n开始执行安装程序！");
+                    webClient.DownloadFileAsync(new Uri(current_Northstar_version_Url), @"C:\ProgramData\VTOL_DATA\Releases\Northstar_Release.zip");
+                    Send_Warning_Notif(GetTextResource("NOTIF_WARN_INSTALL_START"));
 
 
 
@@ -2092,14 +2330,22 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             }
             else
             {
-                Send_Error_Notif("\nCould Not Find the ns_startup_args_dedi.txt & ns_startup_args.txt");
+                Send_Error_Notif(GetTextResource("NOTIF_ERROR_CANNOT_FIND_NS_AND_DEDI_ARG"));
 
                 Directory.CreateDirectory(@"C:\ProgramData\VTOL_DATA\Releases\");
-                webClient.DownloadFileAsync(new Uri(current_Northstar_version_Url), @"C:\ProgramData\VTOL_DATA\Releases\NorthStar_Release.zip");
-                Send_Warning_Notif("\n开始执行安装程序！");
+                webClient.DownloadFileAsync(new Uri(current_Northstar_version_Url), @"C:\ProgramData\VTOL_DATA\Releases\Northstar_Release.zip");
+                Send_Warning_Notif(GetTextResource("NOTIF_WARN_INSTALL_START"));
 
             }
+            }
+            catch (Exception ex)
+            {
 
+                Write_To_Log(ex.StackTrace);
+                Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_COMMON_LOG"));
+
+
+            }
         }
         private void CheckIfModenabled(string path)
         {
@@ -2107,12 +2353,12 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             if (Directory.Exists(path + @"\Disable_Corner"))
             {
 
-                Console.WriteLine(path + "    已被禁用");
+             //   Console.WriteLine(path + "    This Mod is Disabled");
 
             }
             else
             {
-                Console.WriteLine(path + "    已被启用");
+              // Console.WriteLine(path + "    This Mod is Enabled");
 
 
 
@@ -2132,7 +2378,6 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 {
                     Dedicated_Server_Startup_ARGS.Text = Ns_dedi_File;
                     Dedicated_Server_Startup_ARGS.Background = Brushes.White;
-                    Arg_Box_Dedi.Text = "x";
                     Arg_Box_Dedi.Text = Read_From_TextFile_OneLine(Ns_dedi_File);
                     GC.Collect();
 
@@ -2140,7 +2385,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 }
                 else
                 {
-                    Send_Error_Notif("Err, File not found , please set it in filepaths!");
+                    Send_Error_Notif(GetTextResource("NOTIF_ERROR_CANNOT_FIND_FILE_SETPATH"));
                     Arg_Box_Dedi.Text = "Err, File not found - ns_startup_args_dedi.txt";
                     Dedicated_Server_Startup_ARGS.Background = Brushes.Red;
 
@@ -2151,7 +2396,6 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
 
                 if (File.Exists(GetFile(Current_Install_Folder, "ns_startup_args.txt").First()))
                 {
-                    Arg_Box.Text = "x";
                     Arg_Box.Text = Read_From_TextFile_OneLine(Current_Install_Folder + @"\ns_startup_args.txt");
 
                     GC.Collect();
@@ -2159,7 +2403,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 }
                 else
                 {
-                    Send_Error_Notif("Err, File not found , please create it in the folder!");
+                    Send_Error_Notif(GetTextResource("NOTIF_ERROR_CANNOT_FIND_FILE_CREATE"));
                     Arg_Box.Text = "Err, File not found - ns_startup_args.txt";
                     GC.Collect();
                 }
@@ -2175,7 +2419,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 }
                 else
                 {
-                    Send_Error_Notif("Err, File not found , please set it in filepaths!");
+                    Send_Error_Notif(GetTextResource("NOTIF_ERROR_CANNOT_FIND_FILE_SETPATH"));
                     Dedicated_Convar_ARGS.Background = Brushes.Red;
 
                     Dedicated_Convar_ARGS.Text = "Err, File not found - autoexec_ns_server.cfg";
@@ -2187,7 +2431,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             else
             {
 
-                Send_Error_Notif("Err, Folder not found");
+                Send_Error_Notif(GetTextResource("NOTIF_ERROR_CANNOT_FIND_FOLDER"));
                 GC.Collect();
 
 
@@ -2237,7 +2481,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 }
                 else
                 {
-                    Send_Warning_Notif("Cannot Move a Mod From An empty List!");
+                    Send_Warning_Notif(GetTextResource("NOTIF_WARN_CANNOT_MOVE_MOD_FROM_EMPTY"));
                     return;
 
                 }
@@ -2246,7 +2490,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             {
 
                 Write_To_Log(ex.StackTrace);
-                Send_Warning_Notif("You cant move a mod you havent selected!");
+                Send_Warning_Notif(GetTextResource("NOTIF_WARN_CANNOT_MOVE_MOD"));
                 return;
             }
 
@@ -2293,7 +2537,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 }
                 else
                 {
-                    Send_Warning_Notif("Cannot Move a Mod From An emppty List!");
+                    Send_Warning_Notif(GetTextResource("NOTIF_WARN_CANNOT_MOVE_MOD_FROM_EMPTY"));
                     return;
 
                 }
@@ -2302,7 +2546,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             {
 
                 Write_To_Log(ex.StackTrace);
-                Send_Warning_Notif("You cant move a mod you havent selected!");
+                Send_Warning_Notif(GetTextResource("NOTIF_WARN_CANNOT_MOVE_MOD"));
                 return;
             }
 
@@ -2328,7 +2572,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 {
                     if (val != null)
                     {
-                        Console.WriteLine(val);
+                      //Console.WriteLine(val);
                         System.IO.DirectoryInfo rootDirs = new DirectoryInfo(Current_Install_Folder + @"\R2Northstar\mods\" + val);
 
                         if (!IsDirectoryEmpty(rootDirs))
@@ -2355,7 +2599,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 {
                     if (val != null)
                     {
-                        Console.WriteLine(Current_Install_Folder + @"\R2Northstar\mods\" + val);
+                      //  Console.WriteLine(Current_Install_Folder + @"\R2Northstar\mods\" + val);
                         System.IO.DirectoryInfo rootDirs = new DirectoryInfo(Current_Install_Folder + @"\R2Northstar\mods\" + val);
 
                         if (!IsDirectoryEmpty(rootDirs))
@@ -2379,12 +2623,12 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
 
                 }
 
-                Send_Success_Notif("Mods移动成功!");
+                Send_Success_Notif(GetTextResource("NOTIF_SUCCESS_MODS_MOVED_SUCCESS"));
             }
             catch (Exception ex)
             {
-                Send_Error_Notif(ex.Message);
-                Send_Warning_Notif("请检查你的Mods文件夹： - " +Current_Install_Folder+@"\R2Northstar\mods\");
+                Write_To_Log(ex.Message);
+                Send_Warning_Notif(GetTextResource("NOTIF_WARN_CHECK_MOD_AT") + Current_Install_Folder + @"\R2Northstar\mods\");
                 // Log_Box.AppendText(ex.StackTrace);
 
             }
@@ -2412,7 +2656,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 }
                 catch (UnauthorizedAccessException ex)
                 {
-                    Send_Warning_Notif("No Access to the Directory!");
+                    Send_Warning_Notif(GetTextResource("NOTIF_WARN_NO_ACCESS_TO_DIRECTORY"));
                     Write_To_Log(ex.StackTrace);
 
                 }
@@ -2496,7 +2740,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             }
             catch (Exception ex)
             {
-                Send_Fatal_Notif("Fatal Error Occured, Please Check Logs!");
+                Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_COMMON_LOG"));
 
                 Write_To_Log(ex.Message);
             }
@@ -2571,7 +2815,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
         {
 
             webClient = null;
-            Send_Info_Notif("\n下载完成!");
+            Send_Info_Notif(GetTextResource("NOTIF_INFO_DOWNLOAD_COMPLETE"));
             Unpack_To_Location(@"C:\ProgramData\VTOL_DATA\Releases\NorthStar_Release.zip", Current_Install_Folder);
             Install_NS.IsEnabled = true;
         }
@@ -2579,16 +2823,20 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
         {
 
             webClient = null;
-            Send_Info_Notif("\n下载完成!");
-            Unpack_To_Location_Custom(Current_Install_Folder+ @"\NS_Downloaded_Mods\MOD.zip", Current_Install_Folder+ @"\R2Northstar\mods");
+            Send_Info_Notif(GetTextResource("NOTIF_INFO_DOWNLOAD_COMPLETE"));
+            Unpack_To_Location_Custom(Current_Install_Folder + @"\NS_Downloaded_Mods\MOD.zip", Current_Install_Folder + @"\R2Northstar\mods");
         }
 
         private void Completed_Mod_Browser(object sender, AsyncCompletedEventArgs e)
         {
 
             webClient = null;
-            Send_Info_Notif("\n下载完成!");
-            Unpack_To_Location_Custom(Current_Install_Folder+ @"\NS_Downloaded_Mods\"+LAST_INSTALLED_MOD+".zip", Current_Install_Folder+ @"\R2Northstar\mods\"+LAST_INSTALLED_MOD,true);
+            Send_Info_Notif(GetTextResource("NOTIF_INFO_DOWNLOAD_COMPLETE"));
+            Mod_Progress_BAR.Value = 0;
+            Mod_Progress_BAR.ShowText = false;
+
+
+            Unpack_To_Location_Custom(Current_Install_Folder+ @"\NS_Downloaded_Mods\"+LAST_INSTALLED_MOD+".zip", Current_Install_Folder+ @"\R2Northstar\mods\"+LAST_INSTALLED_MOD, true);
         }
 
         private void Check_Btn_Click(object sender, RoutedEventArgs e)
@@ -2596,7 +2844,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
 
 
 
-            Auto_Install_And_verify();
+            //Auto_Install_And_verify();
 
         }
 
@@ -2628,13 +2876,13 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             try
             {
 
-                Updater Update = new Updater("R2NorthstarCN", "R2NorthstarCN_Launcher");
+                Updater Update = new Updater("R2Northstar", "Northstar");
                 Update.Force_Version = Properties.Settings.Default.Version;
                 Update.Force_Version_ = true;
                 if (Update.CheckForUpdate())
                 {
                     Badge.Visibility = Visibility.Visible;
-                    Badge.Text = "发现新版本！";
+                    Badge.Text = GetTextResource("BADGE_NEW_UPDATE_AVAILABLE");
                 }
                 else
                 {
@@ -2643,11 +2891,12 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
 
 
                 }
+
             }
             catch (Exception ex)
             {
-                Send_Warning_Notif("请重新安装北极星CN来解决这个问题");
-                Send_Warning_Notif(ex.ToString());
+                Send_Warning_Notif(GetTextResource("NOTIF_WARN_SUGGEST_REINSTALL_NS"));
+                Write_To_Log(ex.ToString());
             }
 
 
@@ -2689,7 +2938,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 else
                 {
 
-                    MessageBox.Show("无法找到NorthStar.exe!");
+                    MessageBox.Show("Could Not Find Northstar.exe!");
 
 
                 }
@@ -2725,7 +2974,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 }
                 catch (Exception ef)
                 {
-                    Send_Fatal_Notif("Fatal Error Occured, Please Check Logs!");
+                    Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_COMMON_LOG"));
 
                     Write_To_Log(ef.StackTrace.ToString());
                 }
@@ -2752,7 +3001,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 }
                 catch (Exception ef)
                 {
-                    Send_Fatal_Notif("Fatal Error Occured, Please Check Logs!");
+                    Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_COMMON_LOG"));
 
                     Write_To_Log(ef.ToString());
                 }
@@ -2767,7 +3016,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 if (Skin_Temp_Loc == null || !File.Exists(Skin_Temp_Loc))
                 {
 
-                   Send_Error_Notif("\nMod Zip文件格式错误");
+                    Send_Error_Notif(GetTextResource("NOTIF_ERROR_INVALID_ZIP_PATH"));
                     return;
 
                 }
@@ -2777,7 +3026,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                     // Send_Success_Notif("\nSkin Found!");
                     if (ZipHasFile(".dds", Skin_Temp_Loc))
                     {
-                       Send_Success_Notif("找到兼容的皮肤！");
+                        Send_Success_Notif(GetTextResource("NOTIF_SUCCESS_COMPATIBLE_SKIN_FOUND"));
                         Compat_Indicator.Fill = Brushes.Green;
                         Install_Skin_Bttn.IsEnabled = true;
                         //   var directory = new DirectoryInfo(root);
@@ -2800,7 +3049,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                     }
                     else
                     {
-                        Send_Error_Notif("发现不兼容的皮肤！");
+                        Send_Error_Notif(GetTextResource("NOTIF_ERROR_SKIN_INCOMPATIBLE"));
                         Compat_Indicator.Fill = Brushes.Red;
                         Install_Skin_Bttn.IsEnabled = false;
 
@@ -2808,7 +3057,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
 
                     try
                     {
-                        Console.WriteLine(Skin_Temp_Loc);
+                      //  Console.WriteLine(Skin_Temp_Loc);
                         String Thumbnail = Current_Install_Folder + @"\Thumbnails\";
                         if (Directory.Exists(Thumbnail))
                         {
@@ -2824,7 +3073,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                                 if (File.Exists(firstOrDefault_Col))
                                 {
                                     String col = Thumbnail + Path.GetFileName(firstOrDefault_Col) + ".png";
-                                    Console.WriteLine(firstOrDefault_Col);
+                                  //  Console.WriteLine(firstOrDefault_Col);
                                     if (File.Exists(col))
                                     {
 
@@ -2838,7 +3087,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                                     }
                                     else
                                     {
-                                        Console.WriteLine(col);
+                                        //Console.WriteLine(col);
                                         DDSImage img_1 = new DDSImage(firstOrDefault_Col);
 
                                         img_1.Save(col);
@@ -2933,7 +3182,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                             {
                                 if (File.Exists(firstOrDefault_Col))
                                 {
-                                    Console.WriteLine(firstOrDefault_Col);
+                                  //  Console.WriteLine(firstOrDefault_Col);
                                     if (File.Exists(firstOrDefault_Col + ".png"))
                                     {
 
@@ -2985,7 +3234,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                                     if (File.Exists(firstOrDefault_ilm + ".png"))
                                     {
 
-                                        Console.WriteLine(firstOrDefault_ilm);
+                                     //   Console.WriteLine(firstOrDefault_ilm);
                                         //    Image Image_2 = new Bitmap(Thumbnail+Path.GetFileName(firstOrDefault_ilm)+".png");
                                         BitmapImage bitmap = new BitmapImage();
                                         bitmap.BeginInit();
@@ -3037,7 +3286,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
 
                         Glow_IMG.Source = bitmap;
                         Write_To_Log(ex.StackTrace);
-                        Send_Fatal_Notif("Fatal Error Occured, Please Check Logs!");
+                        Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_COMMON_LOG"));
 
                     }
 
@@ -3059,13 +3308,13 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                     string path = folderDlg.SelectedPath;
                     if (path == null || !Directory.Exists(path))
                     {
-                        Send_Error_Notif("\n设置了非法安装路径");
+                        Send_Error_Notif(GetTextResource("NOTIF_ERROR_INVALID_INSTALL_PATH"));
 
 
                     }
                     else
                     {
-                        Console.WriteLine(path);
+                      //  Console.WriteLine(path);
                         Current_Install_Folder = path;
                         Found_Install_Folder = true;
                         Titanfall2_Directory_TextBox.Background = Brushes.White;
@@ -3085,8 +3334,8 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             catch (Exception ex)
             {
 
-                MessageBox.Show("\n文件路径错误，请重新设置");
-                Send_Fatal_Notif(ex.Message);
+                Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_FILE_PATH_ISSUE_REBROWSE"));
+                Write_To_Log(ex.Message);
             }
         }
 
@@ -3118,7 +3367,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                     Process process = new Process();
                     procStartInfo.FileName = NSExe;
                     procStartInfo.WorkingDirectory = System.IO.Path.GetDirectoryName(NSExe);
-                    ;
+                    
 
                     // procStartInfo.Arguments = args;
 
@@ -3128,6 +3377,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                     int id = process.Id;
                     pid = id;
                     Process tempProc = Process.GetProcessById(id);
+                    WindowState = WindowState.Minimized;
                     // this.Visible = false;
                     // Thread.Sleep(5000);
                     // tempProc.WaitForExit();
@@ -3141,7 +3391,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 else
                 {
 
-                    MessageBox.Show("无法找到NorthStar.exe!");
+                    MessageBox.Show("Could Not Find Northstar.exe!");
 
 
                 }
@@ -3149,7 +3399,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             else
             {
 
-                Console.WriteLine("Err, File not found");
+             //   Console.WriteLine("Err, File not found");
 
 
             }
@@ -3159,7 +3409,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
         {
             if (Dsiabled_ListBox.SelectedIndex == 0)
             {
-                Send_Warning_Notif("No Mods in List");
+                Send_Warning_Notif(GetTextResource("NOTIF_WARN_NO_MODS_IN_LIST"));
             }
             Move_List_box_Inactive_To_Active(Dsiabled_ListBox);
 
@@ -3169,7 +3419,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
         {
             if (Enabled_ListBox.SelectedIndex == 0)
             {
-                Send_Warning_Notif("No Mods in List");
+                Send_Warning_Notif(GetTextResource("NOTIF_WARN_NO_MODS_IN_LIST"));
             }
             Move_List_box_Active_To_Inactive(Enabled_ListBox);
 
@@ -3196,7 +3446,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                     if (path == null || !File.CheckFileExists)
                     {
 
-                      Send_Error_Notif("\nMod Zip 文件路径错误！");
+                        Send_Error_Notif(GetTextResource("NOTIF_ERROR_INVALID_MOD_ZIP_PATH"));
 
 
                     }
@@ -3204,8 +3454,8 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                     {
                         string FolderName = path.Split(Path.DirectorySeparatorChar).Last();
                         Browse_For_MOD.Text = path;
-                        Console.WriteLine(path);
-                        Console.WriteLine("The Folder Name is-" + FolderName + "\n\n");
+                      //  Console.WriteLine(path);
+                      //  Console.WriteLine("The Folder Name is-" + FolderName + "\n\n");
                         Unpack_To_Location_Custom(path, Current_Install_Folder + @"\R2Northstar\mods");
                         Call_Mods_From_Folder();
 
@@ -3217,8 +3467,8 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             catch (Exception ex)
             {
 
-                Send_Error_Notif("\n路径错误，请重新设置！");
-                Send_Fatal_Notif(ex.Message);
+                Send_Error_Notif(GetTextResource("NOTIF_ERROR_FILE_PATH_ISSUE_REBROWSE"));
+                Write_To_Log(ex.Message);
             }
         }
 
@@ -3237,19 +3487,19 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 Console.WriteLine(i);
 
             var matchingvalues = FileList.FirstOrDefault(stringToCheck => stringToCheck.Contains(""));
-            for (int i = 0; i < FileList.Count; i++)
-            {
-                if (FileList[i].Contains("col")) // (you use the word "contains". either equals or indexof might be appropriate)
-                {
-                    Console.WriteLine(i);
-                }
-            }
+           // for (int i = 0; i < FileList.Count; i++)
+         //   {
+         //       if (FileList[i].Contains("col")) // (you use the word "contains". either equals or indexof might be appropriate)
+         //       {
+                  //  Console.WriteLine(i);
+          //      }
+        //    }
             int DDSFolderExist = 0;
 
             DDSFolderExist = FileList.Count;
             if (DDSFolderExist == 0)
             {
-                MessageBox.Show("zip包中不存在皮肤");
+                MessageBox.Show("Could Not Find Skins in Zip??");
                 //   throw new Exception(rm.GetString("FindSkinFailed"));
             }
 
@@ -3286,7 +3536,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             }
 
             FileList.Clear();
-            Send_Success_Notif("安装成功！");
+            Send_Success_Notif(GetTextResource("NOTIF_SUCCESS_INSTALLED"));
             DirectoryInfo di = new DirectoryInfo(Skin_Path);
             FileInfo[] files = di.GetFiles();
 
@@ -3311,7 +3561,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
 
 
 
-                Console.WriteLine("Files deleted successfully");
+               Console.WriteLine("Files deleted successfully");
                 GC.Collect();
                 Install_Skin_Bttn.IsEnabled = false;
 
@@ -3322,8 +3572,47 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             {
                 Write_To_Log(ef.StackTrace);
 
-                Send_Fatal_Notif("Fatal Error Occured, Please Check Logs!");
+                Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_COMMON_LOG"));
             }
+        }
+        public void getOperatingSystemInfo()
+        {
+            Write_To_Log("Displaying operating system info....");
+            //Create an object of ManagementObjectSearcher class and pass query as parameter.
+            ManagementObjectSearcher mos = new ManagementObjectSearcher("select * from Win32_OperatingSystem");
+            string x = "";
+            foreach (ManagementObject managementObject in mos.Get())
+            {
+                if (managementObject["Caption"] != null)
+                {
+                    x = x +"\n"+ "Operating System Name  :  " + managementObject["Caption"].ToString();   //Display operating system caption
+                }
+                if (managementObject["OSArchitecture"] != null)
+                {
+                    x = x +"\n"+ "Operating System Architecture  :  " + managementObject["OSArchitecture"].ToString();   //Display operating system architecture.
+                }
+                if (managementObject["CSDVersion"] != null)
+                {
+                    x = x +"\n"+ "Operating System Service Pack   :  " + managementObject["CSDVersion"].ToString();     //Display operating system version.
+                }
+            }
+            Write_To_Log(x);
+        }
+        public void getProcessorInfo()
+        {
+            Write_To_Log("\nDisplaying Processor Name....");
+            RegistryKey processor_name = Registry.LocalMachine.OpenSubKey(@"Hardware\Description\System\CentralProcessor\0", RegistryKeyPermissionCheck.ReadSubTree);   //This registry entry contains entry for processor info.
+            string x = "";
+
+            if (processor_name != null)
+            {
+                if (processor_name.GetValue("ProcessorNameString") != null)
+                {
+                    x = x + processor_name.GetValue("ProcessorNameString");   //Display processor ingo.
+                }
+            }
+            Write_To_Log(x);
+
         }
         void Write_To_Log(string Text, bool clear_First = false)
         {
@@ -3364,13 +3653,13 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                     string Accurate_Date = DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss");
                     saveAsyncFile("\n\n" + Accurate_Date + "\n\n", @"C:\ProgramData\VTOL_DATA\Logs\" + date + "-LOG_MODMANAGER V-" + version, true, true);
                     saveAsyncFile(Log_Box.Text, @"C:\ProgramData\VTOL_DATA\Logs\" + date + "-LOG_MODMANAGER V-" + version, true, true);
-                    Send_Success_Notif("Saved Successfully to - " + @"C:\ProgramData\VTOL_DATA\Logs");
+                    Send_Success_Notif(GetTextResource("NOTIF_SUCCESS_SAVED_TO") + @"C:\ProgramData\VTOL_DATA\Logs");
                 }
                 else
                 {
 
                     saveAsyncFile(Log_Box.Text, @"C:\ProgramData\VTOL_DATA\Logs\" + date + "-LOG_MODMANAGER V-" + version, true, false);
-                    Send_Success_Notif("Saved Successfully to - " + @"C:\ProgramData\VTOL_DATA\Logs");
+                    Send_Success_Notif(GetTextResource("NOTIF_SUCCESS_SAVED_TO") + @"C:\ProgramData\VTOL_DATA\Logs");
 
 
                 }
@@ -3382,7 +3671,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             {
                 Directory.CreateDirectory(@"C:\ProgramData\VTOL_DATA\Logs");
                 saveAsyncFile(Log_Box.Text, @"C:\ProgramData\VTOL_DATA\Logs\" + date + " -LOG_MODMANAGER" + version, true, false);
-                Send_Success_Notif("Saved Successfully to - " + @"C:\ProgramData\VTOL_DATA\Logs");
+                Send_Success_Notif(GetTextResource("NOTIF_SUCCESS_SAVED_TO") + @"C:\ProgramData\VTOL_DATA\Logs");
 
             }
         }
@@ -3391,16 +3680,10 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
         {
             Write_To_Log("", true);
         }
-        public async Task Run_Load_Line()
-        {
-            Load_Line.IsRunning = true;
-
-
-        }
+    
         private async void Load_Click(object sender, RoutedEventArgs e)
         {
-            Load.IsEnabled = false;
-            Load_Line.IsRunning=true;
+            
             try
             {
                 Dispatcher.BeginInvoke(
@@ -3408,8 +3691,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             }
             finally
             {
-                Load_Line.IsRunning=false;
-                Load.IsEnabled = true;
+               
             }
 
 
@@ -3473,7 +3755,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 else
                 {
 
-                    MessageBox.Show("无法找到r2ds.bat!");
+                    MessageBox.Show("Could Not Find Dedicated bat!");
 
 
                 }
@@ -3481,7 +3763,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             else
             {
 
-                MessageBox.Show("无法找到r2ds.bat!");
+                MessageBox.Show("Could Not Find Dedicated bat!");
 
 
             }
@@ -3535,7 +3817,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 else
                 {
 
-                    MessageBox.Show("无法找到NorthStar.exe!");
+                    MessageBox.Show("Could Not Find Northstar.exe!");
 
 
                 }
@@ -3551,32 +3833,38 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
 
         private void Ns_Args_Unchecked(object sender, RoutedEventArgs e)
         {
-            Write_To_Log("\n将覆盖ns_startup_args.txt!");
+            Write_To_Log("\nOVERWRITE ns_startup_args.txt ENABLED!");
             Properties.Settings.Default.Ns_Startup = false;
             Properties.Settings.Default.Save();
+            do_not_overwrite_Ns_file= Properties.Settings.Default.Ns_Dedi;
+
         }
 
         private void Ns_Args_Checked(object sender, RoutedEventArgs e)
         {
 
-            Write_To_Log("\n将不会覆盖ns_startup_args.txt - 我们将备份原来的文件，当更新完成后恢复");
+            Write_To_Log("\nDo not overwrite ns_startup_args.txt ENABLED! - this will backup and restore the original ns_startup_args and from the folder");
             Properties.Settings.Default.Ns_Startup = true;
             Properties.Settings.Default.Save();
+            do_not_overwrite_Ns_file= Properties.Settings.Default.Ns_Dedi;
+
         }
 
         private void Ns_Args_Dedi_Checked(object sender, RoutedEventArgs e)
         {
-
-            Write_To_Log("\n将不会覆盖ns_startup_args_Dedi.txt - 我们将备份原来的文件，当更新完成后恢复");
+            Write_To_Log("\nDo not overwrite ns_startup_args_Dedi.txt ENABLED! - this will backup and restore the original ns_startup_args_dedi from the folder");
             Properties.Settings.Default.Ns_Dedi = true;
             Properties.Settings.Default.Save();
+            do_not_overwrite_Ns_file_Dedi = Properties.Settings.Default.Ns_Dedi;
+
         }
 
         private void Ns_Args_Dedi_Unchecked(object sender, RoutedEventArgs e)
         {
-            Write_To_Log("\n将覆盖ns_startup_args_Dedi.txt!");
+            Write_To_Log("\nOVERWRITE ns_startup_args_Dedi.txt ENABLED!");
             Properties.Settings.Default.Ns_Dedi = false;
             Properties.Settings.Default.Save();
+            do_not_overwrite_Ns_file_Dedi = Properties.Settings.Default.Ns_Dedi;
         }
 
         private void Gif_Image_Northstar_AnimationStarted(DependencyObject d, XamlAnimatedGif.AnimationStartedEventArgs e)
@@ -3595,7 +3883,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             }
             else
             {
-                Send_Error_Notif("Please Be Aware That your Updater Exe is not in the Home Folder Of VTOL");
+                Send_Error_Notif(GetTextResource("NOTIF_ERROR_UPDATER_NOT_FOUND"));
 
             }
         }
@@ -3604,14 +3892,26 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
         {
             if (File.Exists(updaterModulePath))
             {
+                try
+                {
 
+
+                    Process[] processes = Process.GetProcessesByName(updaterModulePath);
+                    if (processes.Length > 0)
+                        processes[0].CloseMainWindow();
+                }
+                catch(Exception ex)
+                {
+                    Write_To_Log(ex.Message);
+
+                }
                 Process process = Process.Start(updaterModulePath, "/configure");
                 process.Close();
 
             }
             else
             {
-                Send_Error_Notif("Please Be Aware That your Updater Exe is not in the Home Folder Of the VTOL");
+                Send_Error_Notif(GetTextResource("NOTIF_ERROR_UPDATER_NOT_FOUND"));
 
             }
         }
@@ -3638,11 +3938,11 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                     {
                         saveAsyncFile(Arg_Box_Dedi.Text, Current_Install_Folder + @"\ns_startup_args_dedi.txt", false, false);
 
-                        Send_Success_Notif("Saved to - ns_startup_args_dedi.txt");
+                        Send_Success_Notif(GetTextResource("NOTIF_SUCCESS_SAVED_TO_DASH_NS_ARGS_DEDI"));
                     }
                     else
                     {
-                        Send_Fatal_Notif("\nIssue with Auto Saving the File, Please Check Logs");
+                        Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_AUTO_SAVE_FAILED"));
 
                         Write_To_Log("File Location Not Found!");
 
@@ -3652,7 +3952,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             catch (Exception ex)
             {
 
-                Send_Fatal_Notif("\nIssue with Auto Saving the File, Please Check Logs");
+                Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_AUTO_SAVE_FAILED"));
                 Write_To_Log(ex.Message);
             }
         }
@@ -3667,13 +3967,13 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                     if (File.Exists(Current_Install_Folder + @"\ns_startup_args.txt"))
                     {
                         saveAsyncFile(Arg_Box.Text, Current_Install_Folder + @"\ns_startup_args.txt", false, false);
-                        Send_Success_Notif("Saved to - ns_startup_args.txt");
+                        Send_Success_Notif(GetTextResource("NOTIF_SUCCESS_SAVED_TO_DASH_NS_ARGS"));
 
 
                     }
                     else
                     {
-                        Send_Fatal_Notif("\nIssue with Auto Saving the File, Please Check Logs");
+                        Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_AUTO_SAVE_FAILED"));
                         Write_To_Log("File Location Not Found!");
 
                     }
@@ -3682,7 +3982,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             catch (Exception ex)
             {
 
-                Send_Fatal_Notif("\nIssue with Auto Saving the File, Please Check Logs");
+                Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_AUTO_SAVE_FAILED"));
                 Write_To_Log(ex.Message);
             }
         }
@@ -3703,7 +4003,6 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                         string type = Split[0];
                         string name = Split[1];
                         string ARG = Split[2];
-                        Send_Info_Notif(ARG);
                         if (ARG!= null && ARG!= "" && ARG == "CONVAR")
                         {
 
@@ -3714,7 +4013,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                             if (list == "" || list == null)
                             {
 
-                                Send_Error_Notif("No Selection!, Removing Item!");
+                                Send_Error_Notif(GetTextResource("NOTIF_ERROR_NO_SELECTION"));
                                 Write_convar_To_File(name, "REMOVE", Description, true, Convar_File);
 
                             }
@@ -3728,14 +4027,13 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                         {
                             string list = String.Join(" ", comboBox.SelectedItems.Cast<String>().ToArray());
 
-
                             Write_Startup_Arg_To_File(name, list, false, true, Ns_dedi_File);
                             comboBox.Foreground = Brushes.White;
 
                         }
                         else
                         {
-                            Send_Error_Notif("Could Not UnderStand Input Type!");
+                            Send_Error_Notif(GetTextResource("NOTIF_ERROR_CANNOT_READ_INPUT"));
                         }
                     }
                     else
@@ -3799,7 +4097,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             {
 
                 Write_To_Log(ex.StackTrace);
-                Send_Error_Notif("Fatal Error Occured, Please Check Logs!");
+                Send_Error_Notif(GetTextResource("NOTIF_ERROR_FATAL"));
 
 
             }
@@ -3838,7 +4136,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             {
 
                 Write_To_Log(ex.StackTrace);
-                Send_Fatal_Notif("Fatal Error Occured, Please Check Logs!");
+                Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_COMMON_LOG"));
 
 
             }
@@ -3868,7 +4166,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             {
 
                 Write_To_Log(ex.StackTrace);
-                Send_Fatal_Notif("Fatal Error Occured, Please Check Logs!");
+                Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_COMMON_LOG"));
 
 
             }
@@ -3917,7 +4215,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                     }
                     else
                     {
-                        Send_Warning_Notif("Could Not find Set path!, routing to defualt search.");
+                        Send_Warning_Notif(GetTextResource("NOTIF_WARN_CANNOT_SET_PATH"));
                         RootFolder  = GetFile(Current_Install_Folder, "autoexec_ns_server.cfg").First();
 
                     }
@@ -3992,7 +4290,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                       
                      sw.WriteLine(x);
                    }
-                    Send_Success_Notif("The Varible ["+ Convar_Name+"] Has been Found in the File.The value is now ["+ Convar_Value+"]");
+                    Send_Success_Notif(GetTextResource("NOTIF_SUCCESS_GROUP_CVAR_THE_VARIABLE") + Convar_Name+ GetTextResource("NOTIF_SUCCESS_GROUP_CVAR_HAS_BEEN_FOUND_VALUE") + Convar_Value+"]");
 
 
                 }
@@ -4012,13 +4310,13 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                     {
                         sw.WriteLine(x);
                     }
-                    Send_Success_Notif("The Varible ["+ Convar_Name+"] Has Not been Found in the File.The value Has Been Added and is now ["+ Convar_Value+"]");
+                    Send_Success_Notif(GetTextResource("NOTIF_SUCCESS_GROUP_CVAR_THE_VARIABLE") + Convar_Name+ GetTextResource("NOTIF_SUCCESS_GROUP_CVAR_NOT_FOUND_VALUE") + Convar_Value+"]");
 
                 }
             }
             catch (Exception ex)
             {
-                Send_Fatal_Notif("\nIssue with using Server Setup sys, Please Check Logs!");
+                Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_USING_SERVER_SETUP_SYS"));
                 Write_To_Log(ex.Message);
 
 
@@ -4061,7 +4359,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                     }
                     else
                     {
-                        Send_Warning_Notif("Could Not find Set path!, routing to defualt search.");
+                        Send_Warning_Notif(GetTextResource("NOTIF_WARN_CANNOT_SET_PATH"));
                         RootFolder  = GetFile(Current_Install_Folder, "autoexec_ns_server.cfg").First();
 
                     }
@@ -4103,7 +4401,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             }
             catch (Exception ex)
             {
-                Send_Fatal_Notif("\nIssue with using Server Setup sys, Please Check Logs!");
+                Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_USING_SERVER_SETUP_SYS"));
                 Write_To_Log(ex.Message);
 
 
@@ -4125,7 +4423,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                     }
                     else
                     {
-                        Send_Warning_Notif("Could Not find Set path!, routing to defualt search.");
+                        Send_Warning_Notif(GetTextResource("NOTIF_WARN_CANNOT_SET_PATH"));
                         RootFolder  = GetFile(Current_Install_Folder, "ns_startup_args_dedi.txt").First();
 
                     }
@@ -4163,7 +4461,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             }
             catch (Exception ex)
             {
-                Send_Fatal_Notif("\nIssue with using Server Setup sys, Please Check Logs!");
+                Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_USING_SERVER_SETUP_SYS"));
                 Write_To_Log(ex.Message);
 
 
@@ -4171,15 +4469,15 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             return null;
         }
       
-        void Write_Startup_Arg_To_File(string Convar_Name, string Convar_Value, bool add_quotation = false,bool Kill_If_empty = false, string File_Root = null )
+        void Write_Startup_Arg_To_File(string var_Name, string var_Value, bool add_quotation = false,bool Kill_If_empty = false, string File_Root = null )
         {
 
             try
             {
 
-                string val = Convar_Name.Trim(new Char[] { '-', '+' });
+                string val = var_Name.Trim(new Char[] { '-', '+' });
                 var pattern = @"(?=[+-])";
-                Convar_Value = Convar_Value.Trim();
+                var_Value = var_Value.Trim();
                 string RootFolder = "";
                 if (File_Root != null)
                 {
@@ -4189,7 +4487,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                     }
                     else
                     {
-                        Send_Warning_Notif("Could Not find Set path!, routing to defualt search.");
+                        Send_Warning_Notif(GetTextResource("NOTIF_WARN_CANNOT_SET_PATH"));
                         RootFolder  = GetFile(Current_Install_Folder, "ns_startup_args_dedi.txt").First();
 
                     }
@@ -4212,29 +4510,29 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 }
                 for (int j = 0; j<intermid.Length; j++)
                 {
-                    Console.WriteLine("array[{0}] = {1}", j, intermid[j]);
+                   // Console.WriteLine("array[{0}] = {1}", j, intermid[j]);
 
                 }
-                if (Array.Exists(intermid, element => element.StartsWith(Convar_Name)))
+                if (Array.Exists(intermid, element => element.StartsWith(var_Name)))
                 {
 
                    
-                    int index_of_var = Array.FindIndex(intermid, element => element.StartsWith(Convar_Name));
+                    int index_of_var = Array.FindIndex(intermid, element => element.StartsWith(var_Name));
                     if(add_quotation == true)
                     {
-                        intermid[index_of_var] = Convar_Name + " " + '\u0022'+Convar_Value+ '\u0022';
+                        intermid[index_of_var] = var_Name + " " + '\u0022'+var_Value+ '\u0022';
 
 
                     }
                     else
                     {
-                        intermid[index_of_var] = Convar_Name + " " +Convar_Value;
+                        intermid[index_of_var] = var_Name + " " +var_Value;
 
                     }
 
                     if (Kill_If_empty == true)
                     {
-                        if (Convar_Value == "" || Convar_Value == null)
+                        if (var_Value == "" || var_Value == null)
                         {
                             intermid =intermid.Where((source, index) => index != index_of_var).ToArray();
                         }
@@ -4244,11 +4542,11 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                     String x = String.Join(" ", intermid.ToArray());
                   //  ClearFile(RootFolder +@"\" + "ns_startup_args_dedi.txt");
 
-                    using (StreamWriter sw = new StreamWriter(RootFolder +@"\" + "ns_startup_args_dedi.txt", false, Encoding.UTF8, 65536))
+                    using (StreamWriter sw = new StreamWriter(RootFolder, false, Encoding.UTF8, 65536))
                     {
                         sw.WriteLine(Regex.Replace(x, @"\s+", " ").Replace("+ ","+"));
                     }
-                  //  Send_Success_Notif("The Varible "+ Convar_Name+" Has been Found in the File.The value is now "+ Convar_Value);
+                   Send_Success_Notif(GetTextResource("NOTIF_SUCCESS_GROUP_VAR_THE_VARIABLE") + var_Name+ GetTextResource("NOTIF_SUCCESS_GROUP_VAR_HAS_BEEN_FOUND_VALUE") + var_Value);
 
                     
                 }
@@ -4265,25 +4563,25 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
 
                     }
                     
-                    intermid_ = AddElementToArray(intermid_, Convar_Name +" "+ Convar_Value);
+                    intermid_ = AddElementToArray(intermid_, var_Name +" "+ var_Value);
                     
                   
                     String x = String.Join(" ", intermid_.ToArray());
                     //x.Replace(System.Environment.NewLine, "replacement text");
                     //  File.WriteAllText(RootFolder, String.Empty);
-                    ClearFile(RootFolder +@"\" + "ns_startup_args_dedi.txt");
-                    using (StreamWriter sw = new StreamWriter(RootFolder +@"\" + "ns_startup_args_dedi.txt", false, Encoding.UTF8, 65536))
+                   // ClearFile(RootFolder +@"\" + "ns_startup_args_dedi.txt");
+                    using (StreamWriter sw = new StreamWriter(RootFolder , false, Encoding.UTF8, 65536))
                     {
                         sw.WriteLine(Regex.Replace(x, @"\s+", " "));
                     }
                     // File.WriteAllText(GetFile(RootFolder, "ns_startup_args_dedi.txt").First(), x);
-                    Send_Warning_Notif("The Varible ["+ Convar_Name+"] Was not Found in File. It Has Been Added Now with the value of [" + Convar_Value+"]");
+                    Send_Warning_Notif(GetTextResource("NOTIF_WARN_GROUP_VAR_NOT_FOUND_INFILE") + var_Name + GetTextResource("NOTIF_WARN_GROUP_VAR_SAVED_VALUE") + var_Value+"]");
 
                 }
             }
             catch(Exception ex)
             {
-                Send_Fatal_Notif("\nIssue with using Server Setup sys, Please Check Logs!");
+                Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_USING_SERVER_SETUP_SYS"));
                 Write_To_Log(ex.Message);
 
 
@@ -4444,49 +4742,97 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                                 }
                                 break;
                             case "PORT":
-
-                                if (val.Count() >5)
+                                if (ARG!= null && ARG!= "" && ARG== "CONVAR")
                                 {
-                                    Send_Warning_Notif("Port is larger Than Required");
-                                    Text_Box.Background = Brushes.Red;
-                                }
-                                else
-                                {
-                                    Text_Box.Background = (SolidColorBrush)new BrushConverter().ConvertFrom("#FF4C4C4C");
-
-                                    if (e.Key == Key.Return)
+                                    if (val.Count() >5)
                                     {
+                                        Send_Warning_Notif(GetTextResource("NOTIF_WARN_PORT_TOO_lONG"));
+                                        Text_Box.Background = Brushes.Red;
+                                    }
+                                    else
+                                    {
+                                        Text_Box.Background = (SolidColorBrush)new BrushConverter().ConvertFrom("#FF4C4C4C");
 
-                                        if (IsPort(val) == true && val.Count() <6)
+                                        if (e.Key == Key.Return)
                                         {
-                                            Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
 
-                                            Write_Startup_Arg_To_File(name, val, false, true, Ns_dedi_File);
-                                            Text_Box.Foreground = Brushes.White;
-
-                                            Mouse.OverrideCursor = System.Windows.Input.Cursors.Arrow;
-
-                                            Text_Box.Background = (SolidColorBrush)new BrushConverter().ConvertFrom("#FF4C4C4C");
-
-
-                                        }
-                                        else
-                                        {
-                                            if(val == null || val == "")
+                                            if (IsPort(val) == true && val.Count() <6)
                                             {
+                                                Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
 
-                                                Send_Warning_Notif("An Empty Value At ["+name+"], Has been removed");
-                                                Write_Startup_Arg_To_File(name, val, false, true, Ns_dedi_File);
+                                                Text_Box.Foreground = Brushes.White;
+                                                Write_convar_To_File(name, val, Description, false, Convar_File);
+
+                                                Mouse.OverrideCursor = System.Windows.Input.Cursors.Arrow;
+
+                                                Text_Box.Background = (SolidColorBrush)new BrushConverter().ConvertFrom("#FF4C4C4C");
+
 
                                             }
                                             else
                                             {
-                                                Send_Warning_Notif("Error At ["+name+"]");
-                                                Text_Box.Background = Brushes.Red;
-                                                Text_Box.Text = null;
+                                                if (val == null || val == "")
+                                                {
+
+                                                    Write_convar_To_File(name, val, Description, false, Convar_File);
+
+                                                }
+                                                else
+                                                {
+                                                    Send_Warning_Notif(GetTextResource("NOTIF_WARN_ERROR_AT") +name+"]");
+                                                    Text_Box.Background = Brushes.Red;
+                                                    Text_Box.Text = null;
+
+                                                }
 
                                             }
+                                        }
+                                    }
+                                }
+                                else { 
+                                    if (val.Count() >5)
+                                    {
+                                        Send_Warning_Notif(GetTextResource("NOTIF_WARN_PORT_TOO_lONG"));
+                                        Text_Box.Background = Brushes.Red;
+                                    }
+                                    else
+                                    {
+                                        Text_Box.Background = (SolidColorBrush)new BrushConverter().ConvertFrom("#FF4C4C4C");
 
+                                        if (e.Key == Key.Return)
+                                        {
+
+                                            if (IsPort(val) == true && val.Count() <6)
+                                            {
+                                                Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
+
+                                                Write_Startup_Arg_To_File(name, val, false, true, Ns_dedi_File);
+                                                Text_Box.Foreground = Brushes.White;
+
+                                                Mouse.OverrideCursor = System.Windows.Input.Cursors.Arrow;
+
+                                                Text_Box.Background = (SolidColorBrush)new BrushConverter().ConvertFrom("#FF4C4C4C");
+
+
+                                            }
+                                            else
+                                            {
+                                                if (val == null || val == "")
+                                                {
+
+                                                    Send_Warning_Notif(GetTextResource("NOTIF_WARN_GROUP_CVAR_EMTPY_VALUE") +name+ GetTextResource("NOTIF_WARN_GROUP_CVAR_REMOVED"));
+                                                    Write_Startup_Arg_To_File(name, val, false, true, Ns_dedi_File);
+
+                                                }
+                                                else
+                                                {
+                                                    Send_Warning_Notif(GetTextResource("NOTIF_WARN_GROUP_CVAR_ERROR_AT") + name+"]");
+                                                    Text_Box.Background = Brushes.Red;
+                                                    Text_Box.Text = null;
+
+                                                }
+
+                                            }
                                         }
                                     }
                                 }
@@ -4504,7 +4850,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             }
             catch (Exception ex)
             {
-                Send_Fatal_Notif("\nIssue with writing Input, Please Check Logs");
+                Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_WRITING_INPUT_FAILED"));
                 Write_To_Log(ex.Message);
 
             }
@@ -4623,7 +4969,7 @@ return Arg_List;
 
         private void Dsiabled_ListBox_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
         {
-            Send_Error_Notif("right click");
+//            Send_Error_Notif("right click");
 
         }
 
@@ -4645,7 +4991,7 @@ return Arg_List;
                         if (path == null || !File.Exists(file))
                         {
                            
-                            Send_Error_Notif("\nInvalid Mod Zip Location chosen");
+                            Send_Error_Notif(GetTextResource("NOTIF_ERROR_INVALID_MOD_ZIP_PATH"));
 
 
                         }
@@ -4653,11 +4999,11 @@ return Arg_List;
                         {
                             string FolderName = path.Split(Path.DirectorySeparatorChar).Last();
                             Browse_For_MOD.Text = path;
-                            Console.WriteLine(path);
-                            Console.WriteLine("The Folder Name is-" + FolderName + "\n\n");
-                            Send_Success_Notif("Recieved - " + file);
+                          //Console.WriteLine(path);
+                       //     Console.WriteLine("The Folder Name is-" + FolderName + "\n\n");
+                            Send_Success_Notif(GetTextResource("NOTIF_SUCCESS_RECEIVED_DASH") + file);
 
-                           Unpack_To_Location_Custom(path, Current_Install_Folder + @"\R2Northstar\mods");
+                            Unpack_To_Location_Custom(path, Current_Install_Folder + @"\R2Northstar\mods");
                             Call_Mods_From_Folder();
 
                             ApplyDataBinding();
@@ -4669,7 +5015,7 @@ return Arg_List;
                 {
                     Drag_Drop_Overlay_Skins.Visibility = Visibility.Hidden;
 
-                    Send_Error_Notif("\nIssue with File path, please Rebrowse.");
+                    Send_Error_Notif(GetTextResource("NOTIF_ERROR_FILE_PATH_ISSUE_REBROWSE"));
                     Write_To_Log(ex.Message);
                 }
             }
@@ -4715,7 +5061,7 @@ return Arg_List;
                 }
                 catch (Exception ef)
                 {
-                    Send_Fatal_Notif("Fatal Error Occured, Please Check Logs!");
+                    Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_COMMON_LOG"));
 
                     Write_To_Log(ef.StackTrace.ToString());
                 }
@@ -4742,7 +5088,7 @@ return Arg_List;
                 }
                 catch (Exception ef)
                 {
-                    Send_Fatal_Notif("Fatal Error Occured, Please Check Logs!");
+                    Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_COMMON_LOG"));
 
                     Write_To_Log(ef.ToString());
                 }
@@ -4761,7 +5107,7 @@ return Arg_List;
                         if (Skin_Temp_Loc == null || !File.Exists(Skin_Temp_Loc))
                         {
 
-                            Send_Error_Notif("\nInvalid Mod Zip Location chosen");
+                            Send_Error_Notif(GetTextResource("NOTIF_ERROR_INVALID_MOD_ZIP_PATH"));
                             return;
 
                         }
@@ -4771,7 +5117,7 @@ return Arg_List;
                             // Send_Success_Notif("\nSkin Found!");
                             if (ZipHasFile(".dds", Skin_Temp_Loc))
                             {
-                                Send_Success_Notif("Compatible Skin Detected");
+                                Send_Success_Notif(GetTextResource("NOTIF_SUCCESS_COMPATIBLE_SKIN_FOUND"));
                                 Compat_Indicator.Fill = Brushes.Green;
                                 Install_Skin_Bttn.IsEnabled = true;
                                 //   var directory = new DirectoryInfo(root);
@@ -4794,7 +5140,7 @@ return Arg_List;
                             }
                             else
                             {
-                                Send_Error_Notif("Incompatible Skin Detected");
+                                Send_Error_Notif(GetTextResource("NOTIF_ERROR_SKIN_INCOMPATIBLE"));
                                 Compat_Indicator.Fill = Brushes.Red;
                                 Install_Skin_Bttn.IsEnabled = false;
 
@@ -5037,7 +5383,7 @@ return Arg_List;
 
                 Glow_IMG.Source = bitmap;
                 Write_To_Log(ex.StackTrace);
-                Send_Fatal_Notif("Fatal Error Occured, Please Check Logs!");
+                Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_COMMON_LOG"));
                 Drag_Drop_Overlay_Skins.Visibility = Visibility.Hidden;
 
             }
@@ -5066,7 +5412,7 @@ return Arg_List;
         {
             string val = @"https://github.com/BigSpice/VTOL/blob/master/README.md";
 
-            Send_Info_Notif("Opening - " + val);
+            Send_Info_Notif(GetTextResource("NOTIF_INFO_OPENING") + val);
             System.Diagnostics.Process.Start(new ProcessStartInfo
             {
                 FileName = val,
@@ -5260,113 +5606,123 @@ return Arg_List;
         
         private void TextBox_Initialized(object sender, EventArgs e)
         {
-
-            var val = ((TextBox)sender).Text.ToString();
-            var Tag = ((TextBox)sender).Tag.ToString();
-            TextBox Text_Box = (TextBox)sender;
-            string[] Split = Tag.Split("|");
-            string type = Split[0];
-            string name = Split[1];
-            string ARG = Split[2];
-
-            string import = null;
-            if (ARG == "CONVAR")
+            try
             {
-                this.Dispatcher.Invoke(() =>
-                {
-                    import =  Read_Convar_args(name, Convar_File);
-                    
-                });
-                if (import != null)
-                {
-                    Text_Box.Foreground = Brushes.White;
+                var val = ((TextBox)sender).Text.ToString();
+                var Tag = ((TextBox)sender).Tag.ToString();
+                TextBox Text_Box = (TextBox)sender;
+                string[] Split = Tag.Split("|");
+                string type = Split[0];
+                string name = Split[1];
+                string ARG = Split[2];
 
-                    if (type == "STRING")
+                string import = null;
+                if (ARG == "CONVAR")
+                {
+                    this.Dispatcher.Invoke(() =>
                     {
-                       //  import = import.Replace(name.Trim(new Char[] { '-', '+' }), "");
-                        import = import.Replace("\"", "").Replace(name, "");
-                        int index = import.IndexOf("//");
-                        if (index >= 0)
-                            import = import.Substring(0, index);
+                        import =  Read_Convar_args(name, Convar_File);
 
-                        Text_Box.Text = import.Trim();
-                        //  Send_Warning_Notif(import);
-
-
-                    }
-                    else
+                    });
+                    if (import != null)
                     {
-                        //  import = import.Replace(name.Trim(new Char[] { '-', '+' }), "");
-                        import = import.Replace("\"", "").Replace(name, "");
-                        int index = import.IndexOf("//");
-                        if (index >= 0)
-                            import = import.Substring(0, index);
+                        Text_Box.Foreground = Brushes.White;
 
-
-                        Text_Box.Text = import.Trim() ;
-
-
-                    }
-
-
-
-
-
-
-                }
-                else
-                {
-
-                    Text_Box.Foreground = Brushes.Gray;
-                }
-            }
-            else
-            {
-
-
-                this.Dispatcher.Invoke(() =>
-                {
-                    import = Read_Startup_args(name);
-                });
-                if (import != null)
-                {
-                    Text_Box.Foreground = Brushes.White;
-
-                    if (type == "STRINGQ")
-                    {
-                        Send_Info_Notif(import);
-                        //  import = import.Replace(name.Trim(new Char[] { '-', '+' }), "");
-                        import = import.Replace("\"", "").Replace(name, "");
-
-
-
-                        Text_Box.Text = import.Trim();
-                        //  Send_Warning_Notif(import);
-
-
-                    }
-                    else
-                    {
-                        import.Replace(name.Trim(new Char[] { '-', '+' }), "");
-                        string[] import_split = import.Split(" ");
-                        for (int i = 1; i < import_split.Length; i++)
+                        if (type == "STRING")
                         {
-                            Text_Box.Text = import_split[1].Trim();
+                            //  import = import.Replace(name.Trim(new Char[] { '-', '+' }), "");
+                            import = import.Replace("\"", "").Replace(name, "");
+                            int index = import.IndexOf("//");
+                            if (index >= 0)
+                                import = import.Substring(0, index);
+
+                            Text_Box.Text = import.Trim();
+                            //  Send_Warning_Notif(import);
+
+
                         }
+                        else
+                        {
+                            //  import = import.Replace(name.Trim(new Char[] { '-', '+' }), "");
+                            import = import.Replace("\"", "").Replace(name, "");
+                            int index = import.IndexOf("//");
+                            if (index >= 0)
+                                import = import.Substring(0, index);
+
+
+                            Text_Box.Text = import.Trim();
+
+
+                        }
+
+
+
+
+
+
                     }
+                    else
+                    {
 
-
-
-
-
-
+                        Text_Box.Foreground = Brushes.Gray;
+                    }
                 }
                 else
                 {
 
-                    Text_Box.Foreground = Brushes.Gray;
+
+                    this.Dispatcher.Invoke(() =>
+                    {
+                        import = Read_Startup_args(name);
+                    });
+                    if (import != null)
+                    {
+                        Text_Box.Foreground = Brushes.White;
+
+                        if (type == "STRINGQ")
+                        {
+                            Send_Info_Notif(import);
+                            //  import = import.Replace(name.Trim(new Char[] { '-', '+' }), "");
+                            import = import.Replace("\"", "").Replace(name, "");
+
+
+
+                            Text_Box.Text = import.Trim();
+                            //  Send_Warning_Notif(import);
+
+
+                        }
+                        else
+                        {
+                            import.Replace(name.Trim(new Char[] { '-', '+' }), "");
+                            string[] import_split = import.Split(" ");
+                            for (int i = 1; i < import_split.Length; i++)
+                            {
+                                Text_Box.Text = import_split[1].Trim();
+                            }
+                        }
+
+
+
+
+
+
+                    }
+                    else
+                    {
+
+                        Text_Box.Foreground = Brushes.Gray;
+                    }
                 }
             }
+            catch (Exception ex)
+            {
+               
+                Write_To_Log(ex.Message);
+                Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_COMMON_LOG"));
+
+            }
+
         }
 
         private void UI_List_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
@@ -5432,20 +5788,131 @@ return Arg_List;
                 Convar_Arguments_UI_List.ItemsSource = Convar_Args();
                 Started_Selection = false;
 
-                Load_Bt.Content = "Relead Arguments";
+                Load_Bt.Content = "Reload Arguments";
                 Check_Args();
 
 
             }
             else
             {
-                Send_Error_Notif("Please rebrowse for a Correct Location!");
+                Send_Error_Notif(GetTextResource("NOTIF_ERROR_SUGGEST_REBROWSE"));
                 return;
             }
 
 
 
         }
+
+        private void MenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (Directory.Exists(Current_Install_Folder + @"\R2Northstar\mods\"))
+                {
+                    Process.Start("explorer.exe", Current_Install_Folder + @"\R2Northstar\mods\");
+                }
+            }
+            
+            catch (Exception ex)
+            {
+
+                Write_To_Log(ex.Message);
+                Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_COMMON_LOG"));
+
+            }
+
+        }
+
+        private void Cheat_Sheet_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+
+            Send_Info_Notif(GetTextResource("NOTIF_INFO_OPENING_WIKI"));
+            System.Diagnostics.Process.Start(new ProcessStartInfo
+            {
+                FileName = @"https://r2northstar.gitbook.io/r2northstar-wiki/hosting-a-server-with-northstar/dedicated-server#gamemodes",
+                UseShellExecute = true
+            });
+            }
+
+            catch (Exception ex)
+            {
+
+                Write_To_Log(ex.Message);
+                Send_Fatal_Notif(GetTextResource("NOTIF_FATAL_COMMON_LOG"));
+
+            }
+        }
+
+        private void Grid_DragOver(object sender, DragEventArgs e)
+        {
+
+        }
+
+       
+
+        private void Language_Selection_SelectionChanged(object sender, SelectionChangedEventArgs e) //TODO: fill in the correct xaml file names to each language
+        {
+            if (English.IsSelected == true)
+            {
+
+                ChangeLanguageTo("en");
+            
+            }
+            if (French.IsSelected == true)
+            {
+
+                ChangeLanguageTo("fr");
+
+            }
+            if (German.IsSelected == true)
+            {
+
+                ChangeLanguageTo("de");
+
+            }
+            /*
+            if (Italian.IsSelected == true)
+            {
+                ChangeLanguageTo("en");
+
+            }
+            if (Japanese.IsSelected == true)
+            {
+
+                ChangeLanguageTo("en");
+
+            }
+            if (Portugese.IsSelected == true)
+            {
+                ChangeLanguageTo("en");
+
+            }
+            if (Russian.IsSelected == true)
+            {
+                ChangeLanguageTo("en");
+
+            }
+            */
+            if (Chinese.IsSelected == true)
+            {
+                ChangeLanguageTo("cn");
+
+            }
+
+        }
+
+        private void Language_Selection_MouseEnter(object sender, MouseEventArgs e)
+        {
+            Language_Selection.BorderBrush = Brushes.White;
+        }
+
+        private void Language_Selection_MouseLeave(object sender, MouseEventArgs e)
+        {
+            Language_Selection.BorderBrush = Brushes.Black;
+
+        }
+    }
     }
     
-}
