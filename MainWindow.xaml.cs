@@ -205,7 +205,7 @@ namespace VTOL
                 else
                 {
                     CultureInfo ci = CultureInfo.InstalledUICulture;
-                    ChangeLanguageTo(ci.TwoLetterISOLanguageName);//do this here so there will be UI  texts showing up
+                    ChangeLanguageTo("cn");//do this here so there will be UI  texts showing up
                     Write_To_Log("\nLanguage Detected was - " + ci.TwoLetterISOLanguageName);
                 }
                 Check_For_New_Northstar_Install();
@@ -1418,10 +1418,10 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 var myJObject = JObject.Parse(myJsonString);
 
 
-                current_Northstar_version_Url = myJObject.SelectToken("assets.browser_download_url").Value<string>();
+                //current_Northstar_version_Url = myJObject.SelectToken("assets.browser_download_url").Value<string>();
                 Properties.Settings.Default.Version = myJObject.SelectToken("tag_name").Value<string>();
                 Properties.Settings.Default.Save();
-
+                current_Northstar_version_Url = "https://cdn.wolf109909.top/northstarcnmirror/" + Properties.Settings.Default.Version + ".zip";
                 Send_Info_Notif(GetTextResource("NOTIF_INFO_RELEASE_PARSED") + current_Northstar_version_Url);
 
             }
