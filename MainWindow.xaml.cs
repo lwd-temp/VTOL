@@ -2231,7 +2231,7 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             try { 
 
             completed_flag = 0;
-            Read_Latest_Release("https://api.github.com/repos/R2Northstar/Northstar/releases/latest");
+            Read_Latest_Release("https://api.github.com/repos/R2NorthstarCN/R2NorthstarCN_Launcher/releases/latest");
                 Current_File_Label.Content = GetTextResource("DOWNLOADING_NORTHSTAR_LATEST_RELEAST_TEXT");
                 Status_Label.Content = GetTextResource("CURRENTLY_DOWNLOADING");
                 Wait_Text.Text = GetTextResource("PLEASE_WAIT");
