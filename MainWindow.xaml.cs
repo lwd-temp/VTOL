@@ -544,7 +544,7 @@ namespace VTOL
             }
             Origin_Client_Running = Check_Process_Running("OriginClientService");
 
-            PingHost("Northstar.tf");
+            PingHost("nscn.wolf109909.top");
             //  System.Timers.Timer aTimer = new System.Timers.Timer(5000); //2 minutes in milliseconds
             // aTimer.Elapsed += new ElapsedEventHandler(OnTimedEvent);
             //  aTimer.Start();
@@ -559,7 +559,7 @@ namespace VTOL
 
         private void OnTimedEvent(object source, ElapsedEventArgs e)
         {
-            PingHost("Northstar.tf");
+            PingHost("nscn.wolf109909.top");
             Origin_Client_Running = Check_Process_Running("OriginClientService");
             Indicator_Panel.Refresh();
             GC.Collect();
