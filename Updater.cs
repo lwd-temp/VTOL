@@ -1,16 +1,24 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Reflection;
+
+//using System.Text.Json;
 using System.Threading.Tasks;
+using System.Windows.Forms;
+using Newtonsoft.Json;
+using Windows.Web.Http;
+using System.Windows.Documents;
 
 namespace VTOL
 {
     public class Updater : IDisposable
     {
         public String Force_Version = "";
-        public bool Force_Version_ =false;
+        public bool Force_Version_ = false;
         /// <summary>
         /// Called when there is a update available
         /// </summary>
@@ -50,7 +58,7 @@ namespace VTOL
         /// The github repository name.
         /// </summary>
         public string GithubRepositoryName;
-               /// <summary>
+        /// <summary>
         /// The current state of the Updater
         /// </summary>
         public UpdaterState State { get; private set; }
@@ -63,7 +71,7 @@ namespace VTOL
         private WebClient client;
         private string downloadedAssetPath;
         private readonly string originalInstallPath;
-       public string json = "";
+        public string json = "";
 
         private readonly string backupFileName = "GithubUpdaterBackup.backup";
 
@@ -152,7 +160,7 @@ namespace VTOL
             request.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
             using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
             using (Stream stream = response.GetResponseStream())
-             
+
             using (StreamReader reader = new StreamReader(stream))
             {
                 System.Windows.Forms.MessageBox.Show(reader.ReadToEnd());
@@ -164,24 +172,52 @@ namespace VTOL
         }
         public void Download_Cutom_JSON()
         {
+            try
+            {
+
+                DateTime DateTimeProperty = new DateTime();
+                string save = @"C:\ProgramData\VTOL_DATA\VARS";
 
 
 
-            string address = "https://northstar.thunderstore.io/api/v1/package/";
-         
-           
 
-            
-            WebClient client = new WebClient();
-            Uri uri1 = new Uri(address);
-            
-            client.Headers.Add("user-agent", "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.2; .NET CLR 1.0.3705;)");
-            Stream data = client.OpenRead(address);
-           
-            StreamReader reader = new StreamReader(data);
-            string s = reader.ReadToEnd();
-            Thunderstore = Thunderstore_V1.FromJson(s);
-            
+
+
+               
+                    string address = "https://northstar.thunderstore.io/api/v1/package/";
+
+                    /*
+                    WebClient client = new WebClient();
+                    Uri uri1 = new Uri(address);
+                    client.Headers.Add("user-agent", "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.2; .NET CLR 1.0.3705;)");
+                    Stream data = client.OpenRead(address);
+                    StreamReader reader = new StreamReader(data);
+                    string s = reader.ReadToEnd();
+                     */
+                    Uri uri1 = new Uri(address);
+                    using (var webClient = new System.Net.WebClient())
+                    {
+                        webClient.DownloadFile(uri1, @"C:\ProgramData\VTOL_DATA\VARS\Thunderstore.json");
+                        // Now parse with JSON.Net
+                    }
+
+                    string x = (Directory.GetFiles(save).Where(f => f.Contains("Thunder")).SingleOrDefault());
+
+                // //  using (StreamReader Reader = new StreamReader(x))
+                //  {
+                string json = System.IO.File.ReadAllText(x);
+                        Thunderstore = Thunderstore_V1.FromJson(json);
+
+                  //  }
+                   
+                if (File.Exists(x))
+                {
+                    File.Delete(x);
+                }
+            }
+            catch (Exception ex)
+            {
+            }
         }
         /// <summary>
         /// Gets the the repository, then checks if there is a new version available.
@@ -235,19 +271,19 @@ namespace VTOL
                 throw new NullReferenceException("Could not retrieve Repository");
 
             State = UpdaterState.CheckingForUpdate;
-            if(Force_Version_ == true)
+            if (Force_Version_ == true)
             {
 
-                 currentVersion = Version_.ConvertToVersion(Force_Version);
-                 newestVersion = Version_.ConvertToVersion(repository.TagName);
+                currentVersion = Version_.ConvertToVersion(Force_Version);
+                newestVersion = Version_.ConvertToVersion(repository.TagName);
             }
             else
             {
-                 currentVersion = Version_.ConvertToVersion(Assembly.GetEntryAssembly().GetName().Version.ToString());
-                 newestVersion = Version_.ConvertToVersion(repository.TagName);
+                currentVersion = Version_.ConvertToVersion(Assembly.GetEntryAssembly().GetName().Version.ToString());
+                newestVersion = Version_.ConvertToVersion(repository.TagName);
 
             }
-           
+
 
             if (currentVersion < newestVersion)
             {

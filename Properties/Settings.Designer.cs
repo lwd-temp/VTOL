@@ -82,5 +82,41 @@ namespace VTOL.Properties {
                 this["Automatic_Client_Updates"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool Sort_Mods {
+            get {
+                return ((bool)(this["Sort_Mods"]));
+            }
+            set {
+                this["Sort_Mods"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool Warning_Close_EA {
+            get {
+                return ((bool)(this["Warning_Close_EA"]));
+            }
+            set {
+                this["Warning_Close_EA"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string Profile_Path {
+            get {
+                return ((string)(this["Profile_Path"]));
+            }
+            set {
+                this["Profile_Path"] = value;
+            }
+        }
     }
 }

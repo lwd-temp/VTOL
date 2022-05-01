@@ -1,7 +1,11 @@
 # VTOL
+
+<a href="https://github.com/BigSpice/VTOL/releases/latest/download/VTOL_Installer1.2.1.msi">
+<span>Click me to download!<span>
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/45333346/155147598-71510387-7b83-4dea-a1b8-b322888d8a3e.png" />
+    <img src="https://user-images.githubusercontent.com/45333346/155147598-71510387-7b83-4dea-a1b8-b322888d8a3e.png" />
 </p>
+<a>
 
 Users on the latest release:
 
@@ -11,7 +15,7 @@ Users on the latest release:
 ## This is a launcher for the [Titanfall 2 Northstar Client](https://northstar.tf)
 
 
-![VTOL_Showcase_Trim](https://user-images.githubusercontent.com/23240514/152448826-0a92b6d8-3cce-4107-911c-0a1480ad8a8e.gif)<br /><br /><br />
+![VTOL_Showcase_Trim](https://user-images.githubusercontent.com/23240514/157264628-43601f3e-1066-42ce-8564-e2554bd5799f.gif)<br /><br /><br />
 
 ## Features:
 
@@ -23,16 +27,15 @@ Users on the latest release:
 
 * Installing downloaded [Northstar](https://northstar.tf) mods (.zip files)
 
-* Easily isntall custom Wepaon/Pilot Skins
+* Easily install custom Weapon/Pilot Skins
 
 * Easily start a [Northstar](https://northstar.tf) Dedicated Server
 
 * [Thunderstore](https://northstar.thunderstore.io) Mod Browser
 
+* Create custom servers using this application to fine tune setups.
 
 ### Work In Progress
-
-* Create custom servers using this application to fine tune setups.
 
 * Manage dedicated [Northstar](https://northstar.tf) servers.
 
@@ -64,7 +67,7 @@ Users on the latest release:
 ### Verify [Northstar](https://northstar.tf)
 
 * This will check the status of NorthstarLauncher.exe and show it's install location.
-    *    Steam: `C:\Program Files (x86)\Steam\steamapps\common\Titanfall2NorthstarLauncher.exe`
+    *    Steam: `C:\Program Files (x86)\Steam\steamapps\common\Titanfall2\NorthstarLauncher.exe`
     *    Origin: `C:\Program Files (x86)\Origin Games\Titanfall2\NorthstarLauncher.exe` 
 
    ![image](https://user-images.githubusercontent.com/23240514/152446412-d10f1f7e-bbc2-4558-8e8b-033aae2af410.png)
