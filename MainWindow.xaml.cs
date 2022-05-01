@@ -1878,6 +1878,21 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
 
             }
         }
+        private void NorthstarCN_Read_Latest_Release_From_Masterserver(string address)
+        {
+            Send_Info_Notif("正在从主服务器获取最新游戏版本");
+            WebClient client = new WebClient();
+            Uri uri1 = new Uri(address);
+            client.Headers.Add("user-agent", "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.2; .NET CLR 1.0.3705;)");
+            Stream data = client.OpenRead(address);
+            StreamReader reader = new StreamReader(data);
+            string s = reader.ReadToEnd();
+            Properties.Settings.Default.Version = s;
+            Properties.Settings.Default.Save();
+            current_Northstar_version_Url = "https://cdn.wolf109909.top/northstarcnmirror/" + Properties.Settings.Default.Version + ".zip";
+            Send_Info_Notif(GetTextResource("NOTIF_INFO_RELEASE_PARSED") + current_Northstar_version_Url);
+
+        }
         private void Read_Latest_Release(string address, string json_name = "temp.json", bool Parse = true, bool Log_Msgs = true)
         {
             if (address != null)
@@ -1894,6 +1909,9 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 StreamReader reader = new StreamReader(data);
                 string s = reader.ReadToEnd();
 
+
+
+                
 
 
                 s = s.Replace("[", "");
@@ -2816,7 +2834,14 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             {
 
             completed_flag = 0;
-            Read_Latest_Release("https://api.github.com/repos/R2NorthstarCN/R2NorthstarCN_Launcher/releases/latest");
+                //NorthstarCN version fetching is from masterserver so there won't be any issue with github connectivity
+                
+                NorthstarCN_Read_Latest_Release_From_Masterserver("https://nscn.wolf109909.top/version/query");
+                //Read_Latest_Release("https://api.github.com/repos/R2NorthstarCN/R2NorthstarCN_Launcher/releases/latest");
+                
+                
+                
+
                 Current_File_Label.Content = GetTextResource("DOWNLOADING_NORTHSTAR_LATEST_RELEAST_TEXT");
                 Status_Label.Content = GetTextResource("CURRENTLY_DOWNLOADING");
                 Wait_Text.Text = GetTextResource("PLEASE_WAIT");
