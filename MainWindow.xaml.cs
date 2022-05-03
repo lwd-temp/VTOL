@@ -782,7 +782,7 @@ namespace VTOL
             try
             {
                 using (var client = new WebClient())
-                using (var stream = client.OpenRead("http://www.google.com"))
+                using (var stream = client.OpenRead("http://www.baidu.com"))
                 {
 
                     return true;
@@ -3589,7 +3589,8 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
             try
             {
 
-                Updater Update = new Updater("R2Northstar", "Northstar");
+                Updater Update = new Updater("R2NorthstarCN", "R2NorthstarCN_Launcher");
+                
                 Update.Force_Version = Properties.Settings.Default.Version;
                 Update.Force_Version_ = true;
                 if (Update.CheckForUpdate())
