@@ -174,7 +174,7 @@
             </Button>
             <Button x:Name="Northstar_Btn" Height="54" Background="#FF2C4C4C" BorderThickness="1,1,1,1" BorderBrush="#FF02FFB4" HorizontalAlignment="Stretch" Margin="524,0,35,0" MouseEnter="Northstar_Btn_MouseEnter" Click="Northstar_Btn_Click" Width="430">
                 <StackPanel Orientation="Horizontal">
-                    <Image Source="Resources/NS_ICON.png" Width="24" Height="24"/>
+                    <Image Source="Resources/NSCN_ICON.png" Width="24" Height="24"/>
                     <TextBlock Text="{DynamicResource UI_BUTTON_MAIN_LAUNCH_NS}" VerticalAlignment="Center" />
                 </StackPanel>
             </Button>

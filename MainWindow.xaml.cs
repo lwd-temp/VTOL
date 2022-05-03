@@ -2043,41 +2043,12 @@ Every cent counts towards feeding my baby Ticks - https://www.buymeacoffee.com/J
                 Write_To_Log(e.StackTrace);
                 return;
 
-                return null;
+           
             }
 
 
         }
-        private void Parse_Release(string json_name = "temp.json")
-        {
-            if (File.Exists(@"C:\ProgramData\VTOL_DATA\temp\" + json_name))
-            {
-                var myJsonString = File.ReadAllText(@"C:\ProgramData\VTOL_DATA\temp\" + json_name);
-                var myJObject = JObject.Parse(myJsonString);
-
-
-                //current_Northstar_version_Url = myJObject.SelectToken("assets.browser_download_url").Value<string>();
-                Properties.Settings.Default.Version = myJObject.SelectToken("tag_name").Value<string>();
-                Properties.Settings.Default.Save();
-                current_Northstar_version_Url = "https://cdn.wolf109909.top/northstarcnmirror/" + Properties.Settings.Default.Version + ".zip";
-                Send_Info_Notif(GetTextResource("NOTIF_INFO_RELEASE_PARSED") + current_Northstar_version_Url);
-
-            }
-            else
-            {
-                Send_Error_Notif(GetTextResource("NOTIF_ERROR_RELEASE_NOT_FOUND"));
-
-
-            }
-
-            if (Directory.Exists(@"C:\ProgramData\VTOL_DATA\temp\" + json_name))
-            {
-                if (File.Exists(@"C:\ProgramData\VTOL_DATA\temp\" + json_name))
-                {
-                    File.Delete(@"C:\ProgramData\VTOL_DATA\temp\" + json_name);
-                }
-            }
-        }
+       
         private void DirectoryCopy(
               string sourceDirName, string destDirName, bool copySubDirs)
         {
