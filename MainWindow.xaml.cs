@@ -815,7 +815,7 @@ namespace VTOL
                 {
                     Server_Indicator.Fill = Brushes.Red;
                     Indicator_Server_Conn.Visibility = Visibility.Visible;
-                    Server_poptip.Content = "The Device Is offline!";
+                    Server_poptip.Content = "您的设备不在线！";
                     return false;
 
 
@@ -825,7 +825,7 @@ namespace VTOL
             {
                 Server_Indicator.Fill = Brushes.Red;
                 Indicator_Server_Conn.Visibility = Visibility.Visible;
-                Server_poptip.Content = "The Northstar Servers are offline!";
+                Server_poptip.Content = "无法与NorthstarCN服务器通讯！";
 
                 return false;
                 // Discard PingExceptions and return false;
